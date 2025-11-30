@@ -1,0 +1,5 @@
+{
+  "name": "EnidAI - Öğrenci Takip Sistemi",
+  "description": "Eğitmen ve öğrenciler için yapay zeka destekli ödev takip, notlandırma ve yönetim platformu.",
+  "requestFramePermissions": []
+}
