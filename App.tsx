@@ -596,6 +596,7 @@ const CallOverlay: React.FC<{ session: CallSession, onEnd: () => void }> = ({ se
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // Added loading state
   const [activeTab, setActiveTab] = useState('dashboard');
   const [darkMode, setDarkMode] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
@@ -665,6 +666,7 @@ const App: React.FC = () => {
         } else {
             setUser(null);
         }
+        setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -964,6 +966,17 @@ const App: React.FC = () => {
       if (selectedFieldFilter && std.field !== selectedFieldFilter) return false;
       return true;
   });
+
+  if (isAuthLoading) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-[#020617] text-white">
+              <div className="flex flex-col items-center">
+                   <div className="w-16 h-16 rounded-full border-4 border-brand-500/20 border-t-brand-500 animate-spin mb-4"></div>
+                   <div className="text-xl font-bold animate-pulse">Enid AI Yükleniyor...</div>
+              </div>
+          </div>
+      );
+  }
 
   if (!user) return <LandingPage onLoginSuccess={setUser} />;
 
