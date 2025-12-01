@@ -289,11 +289,14 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
         } catch (err: any) {
             console.error(err);
             let errorMessage = "İşlem başarısız.";
+            
+            // Prioritize custom messages over raw errors
             if (err.code === 'auth/invalid-email') errorMessage = "Geçersiz e-posta formatı.";
-            if (err.code === 'auth/user-not-found') errorMessage = "Kullanıcı bulunamadı.";
-            if (err.code === 'auth/wrong-password') errorMessage = "Hatalı şifre.";
-            if (err.code === 'auth/email-already-in-use') errorMessage = "Bu e-posta zaten kullanımda.";
-            if (err.message) errorMessage = err.message;
+            else if (err.code === 'auth/user-not-found') errorMessage = "Kullanıcı bulunamadı. Lütfen kayıt olun.";
+            else if (err.code === 'auth/wrong-password') errorMessage = "Hatalı şifre.";
+            else if (err.code === 'auth/email-already-in-use') errorMessage = "Bu e-posta adresi zaten kullanımda.";
+            else if (err.message) errorMessage = err.message;
+
             setError(errorMessage);
         } finally {
             setLoading(false);
@@ -594,7 +597,14 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
                                      </p>
                                  </div>
                                  
-                                 {error && <div className="mb-6 p-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-sm font-bold text-center animate-pulse">{error}</div>}
+                                 {error && (
+                                     <div className="mb-6 p-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-sm font-bold text-center animate-pulse flex flex-col gap-2">
+                                         <p>{error}</p>
+                                         {error.includes("kullanımda") && loginRole === UserRole.STUDENT && (
+                                             <button onClick={() => setAuthMode('LOGIN')} className="text-amber-400 hover:text-amber-300 underline">Giriş Yap</button>
+                                         )}
+                                     </div>
+                                 )}
 
                                  <div className="flex bg-black/40 p-1.5 rounded-2xl mb-8 border border-white/10">
                                       <button onClick={() => setLoginRole(UserRole.STUDENT)} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${loginRole === UserRole.STUDENT ? 'bg-amber-500 text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}>Öğrenci</button>
