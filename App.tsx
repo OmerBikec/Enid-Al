@@ -13,7 +13,7 @@ import {
   Star, Trophy, Target, Rocket, Instagram, Twitter, Facebook, Linkedin, Map,
   CheckSquare, ArrowDown, BrainCircuit, BarChart3, Settings, UserPlus, FileCheck,
   Laptop, Paperclip, Mic, Video, VideoOff, MicOff, PhoneOff, Headphones, ShieldCheck,
-  Smartphone, Monitor, Lightbulb, Key, Unlock
+  Smartphone, Monitor, Lightbulb, Key, Unlock, LogIn
 } from 'lucide-react';
 import { 
   User, UserRole, Assignment, Submission, SubmissionStatus, 
@@ -199,7 +199,6 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
             setIsInstructorVerified(false);
             setInstructorCode('');
         }
-        // Don't auto-switch mode here, let user choose
         setError(null);
     }, [loginRole]);
 
@@ -254,6 +253,7 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
 
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                 
+                // FIX: Ensure no undefined values are sent to Firestore
                 const userData: User = {
                     id: userCredential.user!.uid,
                     name: registerForm.name,
@@ -261,12 +261,16 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
                     email: email,
                     pin: '', 
                     avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${registerForm.name}`,
-                    tcNo: registerForm.tcNo,
-                    className: loginRole === UserRole.STUDENT ? registerForm.className : undefined,
-                    field: loginRole === UserRole.STUDENT ? registerForm.field : undefined
+                    tcNo: registerForm.tcNo || '',
+                    // Use null if undefined to avoid Firestore "Unsupported field value: undefined" error
+                    className: loginRole === UserRole.STUDENT && registerForm.className ? registerForm.className : undefined,
+                    field: loginRole === UserRole.STUDENT && registerForm.field ? registerForm.field : undefined
                 };
+
+                // Remove undefined keys before saving
+                const safeUserData = JSON.parse(JSON.stringify(userData));
                 
-                await db.collection("users").doc(userCredential.user!.uid).set(userData);
+                await db.collection("users").doc(userCredential.user!.uid).set(safeUserData);
                 onLoginSuccess(userData);
             }
         } catch (err: any) {
@@ -386,7 +390,7 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
                  <Marquee items={["ODTÜ Bilgisayar", "İTÜ Mimarlık", "Boğaziçi İşletme", "Koç Tıp", "Bilkent Hukuk", "Galatasaray Üniversitesi", "Stanford Kabul", "MIT Kabul"]} />
              </div>
              
-             {/* FEATURES SECTION, STATS, ABOUT, FOOTER (Keeping structure same as before but abbreviated for brevity here, they are fully active in visual) */}
+             {/* FEATURES SECTION, STATS, ABOUT, FOOTER */}
              <div id="stats" className="container mx-auto px-6 py-20 relative z-10">
                  <div className="bg-white/5 p-12 rounded-[3rem] border border-white/10 shadow-2xl backdrop-blur-md">
                      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-white/10">
@@ -518,9 +522,7 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
     );
 }
 
-// ... (CallOverlay component remains the same) ...
 const CallOverlay: React.FC<{ session: CallSession, onEnd: () => void }> = ({ session, onEnd }) => {
-    // ... (Existing code) ...
     const [muted, setMuted] = useState(false);
     const [cameraOff, setCameraOff] = useState(false);
     const [timer, setTimer] = useState(0);
@@ -583,6 +585,7 @@ const App: React.FC = () => {
   const [classes, setClasses] = useState<string[]>([]);
   const [fields, setFields] = useState<string[]>([]);
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   
   // UI States
   const [isModalOpen, setIsModalOpen] = useState<{type: string, isOpen: boolean}>({type: '', isOpen: false});
@@ -651,8 +654,9 @@ const App: React.FC = () => {
       const unsubClasses = db.collection("classes").onSnapshot((snapshot) => setClasses(snapshot.docs.map(d => d.data().name)));
       const unsubFields = db.collection("fields").onSnapshot((snapshot) => setFields(snapshot.docs.map(d => d.data().name)));
       const unsubStudy = db.collection("studySessions").onSnapshot((snapshot) => setStudySessions(snapshot.docs.map(d => ({id: d.id, ...d.data()} as StudySession))));
+      const unsubProjects = db.collection("projects").onSnapshot((snapshot) => setProjects(snapshot.docs.map(d => ({id: d.id, ...d.data()} as Project))));
 
-      return () => { unsubStudents(); unsubAssignments(); unsubExams(); unsubAnnouncements(); unsubClasses(); unsubFields(); unsubStudy(); };
+      return () => { unsubStudents(); unsubAssignments(); unsubExams(); unsubAnnouncements(); unsubClasses(); unsubFields(); unsubStudy(); unsubProjects(); };
   }, [user]);
 
   useEffect(() => {
@@ -769,6 +773,8 @@ const App: React.FC = () => {
 
   if (isAuthLoading) return <div className="min-h-screen flex items-center justify-center bg-[#020617] text-white"><div className="flex flex-col items-center"><div className="w-16 h-16 rounded-full border-4 border-brand-500/20 border-t-brand-500 animate-spin mb-4"></div><div className="text-xl font-bold animate-pulse">Enid AI Yükleniyor...</div></div></div>;
   if (!user) return <LandingPage onLoginSuccess={setUser} />;
+
+  if (activeCall) return <CallOverlay session={activeCall} onEnd={() => setActiveCall(null)} />;
 
   const renderContent = () => {
       if (activeExamSession) {
@@ -1007,6 +1013,7 @@ const App: React.FC = () => {
                                 disabled={todayAttendanceState !== 'NONE' || attendanceLoading} 
                                 variant={todayAttendanceState === 'NONE' ? 'luxury' : 'secondary'} 
                                 className="w-40 h-14 text-lg"
+                                isLoading={todayAttendanceState === 'NONE' && attendanceLoading}
                               >
                                   Giriş Yap
                               </Button>
@@ -1015,6 +1022,7 @@ const App: React.FC = () => {
                                 disabled={todayAttendanceState !== 'CHECKED_IN' || attendanceLoading} 
                                 variant={todayAttendanceState === 'CHECKED_IN' ? 'danger' : 'secondary'}
                                 className="w-40 h-14 text-lg"
+                                isLoading={todayAttendanceState === 'CHECKED_IN' && attendanceLoading}
                               >
                                   Çıkış Yap
                               </Button>
@@ -1053,7 +1061,179 @@ const App: React.FC = () => {
                       </div>
                 </div>
             );
-            
+
+          case 'study':
+              return (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex justify-between items-end mb-4">
+                          <div>
+                              <button onClick={() => setActiveTab('dashboard')} className="flex items-center text-sm text-gray-500 hover:text-white mb-2 transition-colors"><ChevronLeft size={16}/> Geri Dön</button>
+                              <h2 className="text-3xl font-black text-white">Etütler</h2>
+                          </div>
+                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'STUDY', isOpen: true})} variant="luxury"><Plus size={18} className="mr-2"/> Etüt Ekle</Button>}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {studySessions.map(session => (
+                              <div key={session.id} className="glass-panel p-6 rounded-[2rem] hover:bg-white/5 transition-all">
+                                  <div className="flex justify-between items-start mb-4">
+                                      <span className="px-3 py-1 rounded-full bg-brand-500/10 text-brand-400 text-xs font-bold uppercase">{session.subject}</span>
+                                      <span className="text-xs text-gray-500">{new Date(session.date).toLocaleDateString()}</span>
+                                  </div>
+                                  <h3 className="text-xl font-bold text-white mb-2">{session.teacherName} ile Etüt</h3>
+                                  <p className="text-gray-400 text-sm mb-4"><Clock size={14} className="inline mr-1"/> {session.time} • {session.location}</p>
+                                  <Button variant="outline" className="w-full">Katıl</Button>
+                              </div>
+                          ))}
+                          {studySessions.length === 0 && <div className="col-span-full"><EmptyState icon={Calendar} title="Etüt Yok" description="Şu an planlanmış bir etüt bulunmuyor." /></div>}
+                      </div>
+                  </div>
+              );
+
+          case 'projects':
+              return (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex justify-between items-end mb-4">
+                          <div>
+                              <button onClick={() => setActiveTab('dashboard')} className="flex items-center text-sm text-gray-500 hover:text-white mb-2 transition-colors"><ChevronLeft size={16}/> Geri Dön</button>
+                              <h2 className="text-3xl font-black text-white">Projeler</h2>
+                          </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                          {projects.map(proj => (
+                              <div key={proj.id} className="glass-panel p-6 rounded-[2rem] flex items-center justify-between">
+                                  <div>
+                                      <h3 className="text-xl font-bold text-white mb-1">{proj.title}</h3>
+                                      <p className="text-gray-400 text-sm">{proj.description}</p>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                      <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
+                                          <div className="h-full bg-brand-500" style={{width: `${proj.progress}%`}}></div>
+                                      </div>
+                                      <span className="text-brand-500 font-bold">{proj.progress}%</span>
+                                  </div>
+                              </div>
+                          ))}
+                          {projects.length === 0 && <EmptyState icon={Layout} title="Proje Yok" description="Aktif proje bulunmuyor." />}
+                      </div>
+                  </div>
+              );
+
+          case 'messages':
+              return (
+                  <div className="h-[calc(100vh-8rem)] glass-panel rounded-[2.5rem] flex overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      {/* Conversation List */}
+                      <div className="w-1/3 border-r border-white/10 bg-white/5 flex flex-col">
+                          <div className="p-6 border-b border-white/10">
+                              <h3 className="text-xl font-bold text-white mb-4">Mesajlar</h3>
+                              <div className="relative">
+                                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"/>
+                                  <input placeholder="Ara..." className="w-full bg-black/50 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:border-brand-500/50 outline-none"/>
+                              </div>
+                          </div>
+                          <div className="flex-1 overflow-y-auto">
+                              {conversations.map(conv => (
+                                  <div key={conv.id} onClick={() => setActiveConversationId(conv.id)} className={`p-4 flex gap-3 cursor-pointer transition-colors ${activeConversationId === conv.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                                      <img src={conv.participantAvatar} className="w-12 h-12 rounded-full bg-black" alt=""/>
+                                      <div className="flex-1 overflow-hidden">
+                                          <div className="flex justify-between items-start">
+                                              <h4 className="font-bold text-white truncate">{conv.participantName}</h4>
+                                              <span className="text-xs text-gray-500">12:30</span>
+                                          </div>
+                                          <p className="text-sm text-gray-400 truncate">{conv.lastMessage}</p>
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                      
+                      {/* Chat Window */}
+                      <div className="flex-1 flex flex-col bg-[#020617]/50">
+                          {activeConversationId ? (
+                              <>
+                                  <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                                      <div className="flex items-center gap-3">
+                                          <img src={conversations.find(c => c.id === activeConversationId)?.participantAvatar} className="w-10 h-10 rounded-full bg-black" alt=""/>
+                                          <h4 className="font-bold text-white">{conversations.find(c => c.id === activeConversationId)?.participantName}</h4>
+                                      </div>
+                                      <div className="flex gap-2">
+                                          <button onClick={() => handleStartCall('voice', conversations.find(c => c.id === activeConversationId)?.participantName || '', conversations.find(c => c.id === activeConversationId)?.participantAvatar || '')} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white"><Phone size={20}/></button>
+                                          <button onClick={() => handleStartCall('video', conversations.find(c => c.id === activeConversationId)?.participantName || '', conversations.find(c => c.id === activeConversationId)?.participantAvatar || '')} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white"><Video size={20}/></button>
+                                      </div>
+                                  </div>
+                                  <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                      {conversations.find(c => c.id === activeConversationId)?.messages.map(msg => (
+                                          <div key={msg.id} className={`flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
+                                              <div className={`max-w-[70%] p-3 rounded-2xl ${msg.senderId === user.id ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-white/10 text-white rounded-tl-none'}`}>
+                                                  {msg.messageType === 'text' && <p>{msg.text}</p>}
+                                                  {msg.messageType === 'image' && <img src={msg.fileUrl} className="rounded-lg max-w-full" alt="Shared"/>}
+                                                  {msg.messageType === 'file' && <div className="flex items-center gap-2"><FileText size={20}/> <span className="underline">{msg.fileName}</span></div>}
+                                                  {msg.messageType === 'audio' && <div className="flex items-center gap-2"><PlayCircle size={20}/> <span>Ses Kaydı ({msg.duration})</span></div>}
+                                                  <span className="text-[10px] opacity-50 block text-right mt-1">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                                  <div className="p-4 border-t border-white/10 bg-white/5 flex gap-2 items-center">
+                                      <button onClick={handleFileUpload} className="p-2 text-gray-400 hover:text-white"><Paperclip size={20}/></button>
+                                      <input value={messageInput} onChange={e => setMessageInput(e.target.value)} placeholder="Mesaj yaz..." className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-brand-500/50 outline-none"/>
+                                      {messageInput ? (
+                                          <button onClick={() => handleSendMessage('text')} className="p-2 bg-brand-600 text-white rounded-full"><Send size={18}/></button>
+                                      ) : (
+                                          <button onClick={handleVoiceRecord} className={`p-2 rounded-full ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-gray-400 hover:text-white'}`}><Mic size={20}/></button>
+                                      )}
+                                  </div>
+                              </>
+                          ) : (
+                              <div className="flex-1 flex items-center justify-center text-gray-500">Sohbet seçiniz</div>
+                          )}
+                      </div>
+                  </div>
+              );
+
+          case 'classes':
+              return (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex justify-between items-end mb-4">
+                          <div>
+                              <button onClick={() => setActiveTab('dashboard')} className="flex items-center text-sm text-gray-500 hover:text-white mb-2 transition-colors"><ChevronLeft size={16}/> Geri Dön</button>
+                              <h2 className="text-3xl font-black text-white">Sınıflar</h2>
+                          </div>
+                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'CLASS', isOpen: true})} variant="luxury"><Plus size={18} className="mr-2"/> Sınıf Ekle</Button>}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {classes.map((cls, idx) => (
+                              <div key={idx} onClick={() => { setActiveTab('students'); setSelectedClassFilter(cls); }} className="glass-panel p-6 rounded-[2rem] text-center hover:bg-white/5 cursor-pointer hover:border-brand-500 transition-all group">
+                                  <h3 className="text-2xl font-black text-white group-hover:text-brand-500 transition-colors">{cls}</h3>
+                                  <p className="text-xs text-gray-500 uppercase font-bold mt-2">Öğrencileri Gör</p>
+                              </div>
+                          ))}
+                          {classes.length === 0 && <EmptyState icon={Layout} title="Sınıf Yok" description="Henüz sınıf eklenmemiş." />}
+                      </div>
+                  </div>
+              );
+
+          case 'fields':
+               return (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex justify-between items-end mb-4">
+                          <div>
+                              <button onClick={() => setActiveTab('dashboard')} className="flex items-center text-sm text-gray-500 hover:text-white mb-2 transition-colors"><ChevronLeft size={16}/> Geri Dön</button>
+                              <h2 className="text-3xl font-black text-white">Alanlar</h2>
+                          </div>
+                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'FIELD', isOpen: true})} variant="luxury"><Plus size={18} className="mr-2"/> Alan Ekle</Button>}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {fields.map((f, idx) => (
+                              <div key={idx} onClick={() => { setActiveTab('students'); setSelectedFieldFilter(f); }} className="glass-panel p-6 rounded-[2rem] text-center hover:bg-white/5 cursor-pointer hover:border-brand-500 transition-all group">
+                                  <h3 className="text-xl font-black text-white group-hover:text-brand-500 transition-colors">{f}</h3>
+                                  <p className="text-xs text-gray-500 uppercase font-bold mt-2">Öğrencileri Gör</p>
+                              </div>
+                          ))}
+                           {fields.length === 0 && <EmptyState icon={Layout} title="Alan Yok" description="Henüz alan eklenmemiş." />}
+                      </div>
+                  </div>
+              );
+
           default:
               // Dashboard View (Bento Grid)
               return (
@@ -1068,13 +1248,43 @@ const App: React.FC = () => {
                               <img src={user?.avatarUrl} className="w-12 h-12 rounded-full bg-brand-500/20 border border-brand-500/30" alt="Profile"/>
                           </div>
                       </header>
-        
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                          <DashboardCard title="Genel Ort." value="84.5" subtitle="Başarılı" icon={TrendingUp} trend="+2.4" colorClass="text-brand-500" />
-                          <DashboardCard title="Tamamlanan" value="12" subtitle="Ödev" icon={CheckCircle} colorClass="text-green-500" />
-                          <DashboardCard title="Bekleyen" value="3" subtitle="Ödev" icon={Clock} colorClass="text-orange-500" />
-                          <DashboardCard title="Sıralama" value="#4" subtitle="Sınıf" icon={Award} trend="+1" colorClass="text-purple-500" />
-                      </div>
+
+                      {user.role === UserRole.INSTRUCTOR ? (
+                        <>
+                           {/* MODERN INSTRUCTOR HERO */}
+                           <div className="glass-panel rounded-[3rem] p-10 mb-10 relative overflow-hidden border border-white/10 shadow-glow-lg">
+                               <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-amber-500/20 via-orange-600/10 to-transparent rounded-full blur-[100px] pointer-events-none"></div>
+                               <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
+                                   <div className="text-center md:text-left">
+                                       <span className="inline-block px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 text-xs font-bold uppercase tracking-widest mb-4 border border-amber-500/20">Yönetim Paneli</span>
+                                       <h2 className="text-4xl lg:text-5xl font-black text-white mb-4 leading-tight">Kurumun<br/>Komuta Merkezi.</h2>
+                                       <p className="text-gray-400 max-w-md">Anlık veri akışı, öğrenci takibi ve akademik analiz tek ekranda.</p>
+                                   </div>
+                                   <div className="flex gap-4">
+                                       <div className="p-6 bg-white/5 rounded-[2rem] border border-white/10 backdrop-blur-md text-center w-32 hover:scale-105 transition-transform duration-300 shadow-xl">
+                                           <div className="text-3xl font-black text-white mb-1">{students.length}</div>
+                                           <div className="text-[10px] font-bold text-gray-500 uppercase">Öğrenci</div>
+                                       </div>
+                                       <div className="p-6 bg-white/5 rounded-[2rem] border border-white/10 backdrop-blur-md text-center w-32 hover:scale-105 transition-transform duration-300 shadow-xl">
+                                            <div className="text-3xl font-black text-white mb-1">{fields.length}</div>
+                                            <div className="text-[10px] font-bold text-gray-500 uppercase">Aktif Alan</div>
+                                       </div>
+                                       <div className="p-6 bg-green-500/10 rounded-[2rem] border border-green-500/20 backdrop-blur-md text-center w-32 hover:scale-105 transition-transform duration-300 shadow-xl animate-pulse-slow">
+                                            <div className="text-3xl font-black text-green-400 mb-1">248</div>
+                                            <div className="text-[10px] font-bold text-green-500/70 uppercase">Günlük Giriş</div>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                        </>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                            <DashboardCard title="Genel Ort." value="84.5" subtitle="Başarılı" icon={TrendingUp} trend="+2.4" colorClass="text-brand-500" />
+                            <DashboardCard title="Tamamlanan" value="12" subtitle="Ödev" icon={CheckCircle} colorClass="text-green-500" />
+                            <DashboardCard title="Bekleyen" value="3" subtitle="Ödev" icon={Clock} colorClass="text-orange-500" />
+                            <DashboardCard title="Sıralama" value="#4" subtitle="Sınıf" icon={Award} trend="+1" colorClass="text-purple-500" />
+                        </div>
+                      )}
                       
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                            <div className="lg:col-span-2 glass-panel p-8 rounded-[2.5rem]">
@@ -1130,7 +1340,18 @@ const App: React.FC = () => {
                 <SidebarItem icon={Layout} label="Panel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} collapsed={collapsed} />
                 <SidebarItem icon={BookOpen} label="Ödevler" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} collapsed={collapsed} />
                 <SidebarItem icon={FileText} label="Sınavlar" active={activeTab === 'exams'} onClick={() => setActiveTab('exams')} collapsed={collapsed} />
-                {user.role === UserRole.INSTRUCTOR && <SidebarItem icon={Users} label="Öğrenciler" active={activeTab === 'students'} onClick={() => setActiveTab('students')} collapsed={collapsed} role={user?.role} />}
+                <SidebarItem icon={MessageCircle} label="Mesajlar" active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} collapsed={collapsed} />
+                <SidebarItem icon={Calendar} label="Etütler" active={activeTab === 'study'} onClick={() => setActiveTab('study')} collapsed={collapsed} />
+                <SidebarItem icon={Layers} label="Projeler" active={activeTab === 'projects'} onClick={() => setActiveTab('projects')} collapsed={collapsed} />
+                
+                {user.role === UserRole.INSTRUCTOR && (
+                    <>
+                        <SidebarItem icon={Users} label="Öğrenciler" active={activeTab === 'students'} onClick={() => setActiveTab('students')} collapsed={collapsed} role={user?.role} />
+                        <SidebarItem icon={School} label="Sınıflar" active={activeTab === 'classes'} onClick={() => setActiveTab('classes')} collapsed={collapsed} />
+                        <SidebarItem icon={Briefcase} label="Alanlar" active={activeTab === 'fields'} onClick={() => setActiveTab('fields')} collapsed={collapsed} />
+                    </>
+                )}
+                
                 <SidebarItem icon={Bot} label="AI Asistan" active={activeTab === 'chat'} onClick={() => setActiveTab('chat')} collapsed={collapsed} />
                 <SidebarItem icon={Fingerprint} label="Yoklama" active={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} collapsed={collapsed} />
             </div>
@@ -1179,6 +1400,27 @@ const App: React.FC = () => {
                                 <input placeholder="Konu" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, subject: e.target.value})} />
                                 <input type="number" placeholder="Süre (Dakika)" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, duration: e.target.value})} />
                                 <Button onClick={handleAddExam} className="w-full py-4">Sınavı Yayınla</Button>
+                             </>
+                         )}
+                         {isModalOpen.type === 'STUDY' && (
+                             <>
+                                <input placeholder="Ders/Konu" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, subject: e.target.value})} />
+                                <input placeholder="Öğretmen Adı" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, teacherName: e.target.value})} />
+                                <input type="date" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, date: e.target.value})} />
+                                <input type="time" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, time: e.target.value})} />
+                                <Button onClick={handleAddStudy} className="w-full py-4">Etüt Oluştur</Button>
+                             </>
+                         )}
+                         {isModalOpen.type === 'CLASS' && (
+                             <>
+                                <input placeholder="Sınıf Adı (örn: 11-F)" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, name: e.target.value})} />
+                                <Button onClick={handleAddClass} className="w-full py-4">Sınıf Ekle</Button>
+                             </>
+                         )}
+                         {isModalOpen.type === 'FIELD' && (
+                             <>
+                                <input placeholder="Alan Adı (örn: Sözel)" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, name: e.target.value})} />
+                                <Button onClick={handleAddField} className="w-full py-4">Alan Ekle</Button>
                              </>
                          )}
                          {isModalOpen.type === 'STUDENT' && (
