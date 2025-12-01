@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, GraduationCap, Users, Plus, CheckCircle, Clock, FileText, LogOut, 
@@ -12,7 +13,7 @@ import {
   Star, Trophy, Target, Rocket, Instagram, Twitter, Facebook, Linkedin, Map,
   CheckSquare, ArrowDown, BrainCircuit, BarChart3, Settings, UserPlus, FileCheck,
   Laptop, Paperclip, Mic, Video, VideoOff, MicOff, PhoneOff, Headphones, ShieldCheck,
-  Smartphone, Monitor, Lightbulb, Key
+  Smartphone, Monitor, Lightbulb, Key, Unlock
 } from 'lucide-react';
 import { 
   User, UserRole, Assignment, Submission, SubmissionStatus, 
@@ -32,7 +33,7 @@ const CLASS_OPTIONS = [
     "10-A", "10-B", "10-C", "10-D",
     "11-A", "11-B", "11-C", "11-D",
     "12-A", "12-B", "12-C", "12-D",
-    "Mezun-A", "Mezun-B", "Hazırlık"
+    "Mezun", "Hazırlık"
 ];
 
 const FIELD_OPTIONS = [
@@ -172,61 +173,116 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
     const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
     const [loginRole, setLoginRole] = useState<UserRole>(UserRole.STUDENT);
     
+    // Instructor Verification State
+    const [instructorCode, setInstructorCode] = useState('');
+    const [isInstructorVerified, setIsInstructorVerified] = useState(false);
+
     // Auth Forms
     const [loginForm, setLoginForm] = useState({ email: '', password: '' });
     const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', tcNo: '', className: '', field: '' });
-    const [instructorCode, setInstructorCode] = useState('');
     
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Reset states when opening modal or switching roles
     const openAuth = (mode: 'LOGIN' | 'REGISTER') => {
         setAuthMode(mode);
         setIsAuthModalOpen(true);
         setError(null);
         setLoginForm({ email: '', password: '' });
+        setRegisterForm({ name: '', email: '', password: '', tcNo: '', className: '', field: '' });
         setInstructorCode('');
+        setIsInstructorVerified(false);
+        setLoginRole(UserRole.STUDENT); // Default to student on open
+    };
+
+    useEffect(() => {
+        // Reset Instructor verification when switching to student
+        if (loginRole === UserRole.STUDENT) {
+            setIsInstructorVerified(false);
+            setInstructorCode('');
+            // If we were in REGISTER mode but switched to INSTRUCTOR and back, we keep mode,
+            // but Instructor doesn't have register. Logic handled in render.
+        } else {
+            // If Instructor, default to LOGIN mode as they can't register here
+            setAuthMode('LOGIN');
+        }
+        setError(null);
+    }, [loginRole]);
+
+    const handleVerifyInstructor = () => {
+        if (instructorCode === INSTRUCTOR_SECRET_CODE) {
+            setIsInstructorVerified(true);
+            setError(null);
+        } else {
+            setError("Hatalı Eğitmen Kodu! Erişim reddedildi.");
+        }
+    };
+
+    const validateEmail = (email: string) => {
+        return String(email)
+            .toLowerCase()
+            .match(
+                /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+            );
     };
 
     const handleAuthSubmit = async () => {
         setLoading(true);
         setError(null);
 
-        // Instructor Security Check
-        if (loginRole === UserRole.INSTRUCTOR && instructorCode !== INSTRUCTOR_SECRET_CODE) {
-            setError("Hatalı Eğitmen Kodu! Yetkiniz bulunmuyor.");
-            setLoading(false);
-            return;
-        }
-
         try {
             if (authMode === 'LOGIN') {
-                if (!loginForm.email || !loginForm.password) {
+                const email = loginForm.email.trim();
+                const password = loginForm.password;
+
+                if (!email || !password) {
                    throw new Error("Lütfen e-posta ve şifrenizi giriniz.");
                 }
-                const userCredential = await auth.signInWithEmailAndPassword(loginForm.email.trim(), loginForm.password);
+                if (!validateEmail(email)) {
+                    throw new Error("Geçersiz e-posta formatı.");
+                }
+
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
                 const userDoc = await db.collection("users").doc(userCredential.user!.uid).get();
+                
                 if (userDoc.exists) {
-                    onLoginSuccess({ id: userDoc.id, ...userDoc.data() } as User);
+                    const userData = userDoc.data() as User;
+                    // Role check
+                    if (userData.role !== loginRole) {
+                        throw new Error(`Bu hesap bir ${loginRole === UserRole.INSTRUCTOR ? 'Öğrenci' : 'Eğitmen'} hesabıdır. Lütfen doğru rolden giriş yapın.`);
+                    }
+                    onLoginSuccess({ id: userDoc.id, ...userData });
                 } else {
-                    setError("Kullanıcı verisi bulunamadı.");
+                    // Fallback for demo if user exists in Auth but not Firestore (rare edge case in demo)
+                    throw new Error("Kullanıcı verisi bulunamadı.");
                 }
             } else {
-                if (!registerForm.email || !registerForm.password || !registerForm.name) {
+                // REGISTER
+                const email = registerForm.email.trim();
+                const password = registerForm.password;
+                
+                if (!email || !password || !registerForm.name) {
                     throw new Error("Lütfen zorunlu alanları doldurunuz.");
                 }
-                const userCredential = await auth.createUserWithEmailAndPassword(registerForm.email.trim(), registerForm.password);
+                if (!validateEmail(email)) {
+                    throw new Error("Geçersiz e-posta formatı.");
+                }
+
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                
                 const userData: User = {
                     id: userCredential.user!.uid,
                     name: registerForm.name,
-                    role: loginRole,
-                    email: registerForm.email.trim(),
+                    role: loginRole, // Should be STUDENT here as Instructors can't register
+                    email: email,
                     pin: '', 
                     avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${registerForm.name}`,
                     tcNo: registerForm.tcNo,
                     className: loginRole === UserRole.STUDENT ? registerForm.className : undefined,
                     field: loginRole === UserRole.STUDENT ? registerForm.field : undefined
                 };
+                
                 await db.collection("users").doc(userCredential.user!.uid).set(userData);
                 onLoginSuccess(userData);
             }
@@ -524,9 +580,18 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
                          {/* Right Side (Form) */}
                          <div className="flex-1 p-12 lg:p-16 flex flex-col justify-center relative z-10">
                              <div className="max-w-md mx-auto w-full">
-                                 <div className="mb-10 text-center">
+                                 <div className="mb-8 text-center">
                                      <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 shadow-glow"><UserIcon size={24} className="text-amber-500"/></div>
-                                     <h2 className="text-3xl font-black text-white tracking-tight">{authMode === 'LOGIN' ? 'Hesabına Giriş Yap' : 'Yeni Hesap Oluştur'}</h2>
+                                     <h2 className="text-3xl font-black text-white tracking-tight">
+                                        {loginRole === UserRole.INSTRUCTOR 
+                                            ? 'Eğitmen Girişi' 
+                                            : (authMode === 'LOGIN' ? 'Öğrenci Girişi' : 'Yeni Kayıt Oluştur')}
+                                     </h2>
+                                     <p className="text-gray-500 text-sm mt-2">
+                                        {loginRole === UserRole.INSTRUCTOR 
+                                            ? 'Lütfen erişim kodunuzu ve kimlik bilgilerinizi giriniz.' 
+                                            : 'Eğitim yolculuğunuza devam etmek için bilgilerinizi giriniz.'}
+                                     </p>
                                  </div>
                                  
                                  {error && <div className="mb-6 p-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-sm font-bold text-center animate-pulse">{error}</div>}
@@ -536,104 +601,133 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
                                       <button onClick={() => setLoginRole(UserRole.INSTRUCTOR)} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${loginRole === UserRole.INSTRUCTOR ? 'bg-amber-500 text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}>Eğitmen</button>
                                   </div>
 
-                                  {loginRole === UserRole.INSTRUCTOR && (
-                                     <div className="mb-6">
-                                        <div className="space-y-2 relative">
-                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"><Key size={18} /></div>
-                                            <input 
-                                                type="password"
-                                                name="instructorCode"
-                                                value={instructorCode}
-                                                onChange={e => setInstructorCode(e.target.value)}
-                                                placeholder="Özel Eğitmen Kodu" 
-                                                className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all"
-                                            />
+                                  {/* INSTRUCTOR SECURITY GATEWAY */}
+                                  {loginRole === UserRole.INSTRUCTOR && !isInstructorVerified ? (
+                                     <div className="space-y-6">
+                                        <div className="text-center p-6 bg-white/5 rounded-2xl border border-dashed border-white/10">
+                                            <div className="mb-4 text-amber-500 flex justify-center"><Lock size={32} /></div>
+                                            <p className="text-sm text-gray-400 mb-4">Bu alan sadece yetkili eğitmenler içindir.</p>
+                                            <div className="space-y-2 relative">
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"><Key size={18} /></div>
+                                                <input 
+                                                    type="password"
+                                                    value={instructorCode}
+                                                    onChange={e => setInstructorCode(e.target.value)}
+                                                    placeholder="Özel Eğitmen Kodu" 
+                                                    className="w-full pl-12 pr-5 py-4 rounded-2xl bg-black border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all"
+                                                />
+                                            </div>
                                         </div>
+                                        <Button onClick={handleVerifyInstructor} variant="gold" className="w-full py-5 text-lg font-bold rounded-2xl">Kod Doğrula <Unlock size={18} className="ml-2"/></Button>
                                      </div>
-                                  )}
-
-                                  {authMode === 'LOGIN' ? (
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-500 uppercase ml-2">E-posta</label>
-                                            <input 
-                                                type="email" 
-                                                name="loginEmail"
-                                                autoComplete="email"
-                                                value={loginForm.email} 
-                                                onChange={e => setLoginForm({...loginForm, email: e.target.value})} 
-                                                className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all focus:shadow-[0_0_20px_rgba(245,158,11,0.1)]" 
-                                                placeholder="ornek@enid.com" 
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-500 uppercase ml-2">Şifre</label>
-                                            <input 
-                                                type="password" 
-                                                name="loginPassword"
-                                                autoComplete="current-password"
-                                                value={loginForm.password} 
-                                                onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
-                                                className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all focus:shadow-[0_0_20px_rgba(245,158,11,0.1)]" 
-                                                placeholder="••••••" 
-                                            />
-                                        </div>
-                                        <Button onClick={handleAuthSubmit} variant="gold" className="w-full py-5 text-lg font-bold mt-4 rounded-2xl" disabled={loading} isLoading={loading}>Giriş Yap</Button>
-                                    </div>
                                   ) : (
-                                    <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                                        <input 
-                                            type="text"
-                                            name="registerName"
-                                            placeholder="Ad Soyad" 
-                                            value={registerForm.name} 
-                                            onChange={e => setRegisterForm({...registerForm, name: e.target.value})} 
-                                            className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
-                                        />
-                                        <input 
-                                            type="email" 
-                                            name="registerEmail"
-                                            autoComplete="email"
-                                            placeholder="E-posta" 
-                                            value={registerForm.email} 
-                                            onChange={e => setRegisterForm({...registerForm, email: e.target.value})} 
-                                            className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
-                                        />
-                                        {loginRole === UserRole.STUDENT && (
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <select 
-                                                    value={registerForm.className} 
-                                                    onChange={e => setRegisterForm({...registerForm, className: e.target.value})} 
-                                                    className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-black focus:border-amber-500/50 outline-none appearance-none"
-                                                >
-                                                    <option value="">Sınıf Seçiniz</option>
-                                                    {CLASS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                </select>
-                                                <select 
-                                                    value={registerForm.field} 
-                                                    onChange={e => setRegisterForm({...registerForm, field: e.target.value})} 
-                                                    className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-black focus:border-amber-500/50 outline-none appearance-none"
-                                                >
-                                                    <option value="">Alan Seçiniz</option>
-                                                    {FIELD_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                </select>
+                                    /* LOGIN / REGISTER FORMS */
+                                    <>
+                                        {authMode === 'LOGIN' ? (
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold text-gray-500 uppercase ml-2">E-posta</label>
+                                                    <div className="relative">
+                                                        <Mail size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500"/>
+                                                        <input 
+                                                            type="email" 
+                                                            name="loginEmail"
+                                                            autoComplete="email"
+                                                            value={loginForm.email} 
+                                                            onChange={e => setLoginForm({...loginForm, email: e.target.value})} 
+                                                            className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all focus:shadow-[0_0_20px_rgba(245,158,11,0.1)]" 
+                                                            placeholder="ornek@enid.com" 
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold text-gray-500 uppercase ml-2">Şifre</label>
+                                                    <div className="relative">
+                                                        <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500"/>
+                                                        <input 
+                                                            type="password" 
+                                                            name="loginPassword"
+                                                            autoComplete="current-password"
+                                                            value={loginForm.password} 
+                                                            onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
+                                                            className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all focus:shadow-[0_0_20px_rgba(245,158,11,0.1)]" 
+                                                            placeholder="••••••" 
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <Button onClick={handleAuthSubmit} variant="gold" className="w-full py-5 text-lg font-bold mt-4 rounded-2xl" disabled={loading} isLoading={loading}>Giriş Yap</Button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                                                <input 
+                                                    type="text"
+                                                    name="registerName"
+                                                    placeholder="Ad Soyad" 
+                                                    value={registerForm.name} 
+                                                    onChange={e => setRegisterForm({...registerForm, name: e.target.value})} 
+                                                    className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
+                                                />
+                                                <input 
+                                                    type="email" 
+                                                    name="registerEmail"
+                                                    autoComplete="email"
+                                                    placeholder="E-posta" 
+                                                    value={registerForm.email} 
+                                                    onChange={e => setRegisterForm({...registerForm, email: e.target.value})} 
+                                                    className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
+                                                />
+                                                <input 
+                                                    type="text"
+                                                    name="registerTc"
+                                                    placeholder="TC Kimlik No" 
+                                                    value={registerForm.tcNo} 
+                                                    onChange={e => setRegisterForm({...registerForm, tcNo: e.target.value})} 
+                                                    className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
+                                                />
+                                                
+                                                {/* Only Students need class/field selection */}
+                                                {loginRole === UserRole.STUDENT && (
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <select 
+                                                            value={registerForm.className} 
+                                                            onChange={e => setRegisterForm({...registerForm, className: e.target.value})} 
+                                                            className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-black focus:border-amber-500/50 outline-none appearance-none"
+                                                        >
+                                                            <option value="">Sınıf Seçiniz</option>
+                                                            {CLASS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                        </select>
+                                                        <select 
+                                                            value={registerForm.field} 
+                                                            onChange={e => setRegisterForm({...registerForm, field: e.target.value})} 
+                                                            className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-black focus:border-amber-500/50 outline-none appearance-none"
+                                                        >
+                                                            <option value="">Alan Seçiniz</option>
+                                                            {FIELD_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                        </select>
+                                                    </div>
+                                                )}
+
+                                                <input 
+                                                    type="password" 
+                                                    name="registerPassword"
+                                                    autoComplete="new-password"
+                                                    placeholder="Şifre Belirle" 
+                                                    value={registerForm.password} 
+                                                    onChange={e => setRegisterForm({...registerForm, password: e.target.value})} 
+                                                    className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
+                                                />
+                                                <Button onClick={handleAuthSubmit} variant="gold" className="w-full py-5 text-lg font-bold rounded-2xl" disabled={loading} isLoading={loading}>Kayıt Ol</Button>
                                             </div>
                                         )}
-                                        <input 
-                                            type="password" 
-                                            name="registerPassword"
-                                            autoComplete="new-password"
-                                            placeholder="Şifre Belirle" 
-                                            value={registerForm.password} 
-                                            onChange={e => setRegisterForm({...registerForm, password: e.target.value})} 
-                                            className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
-                                        />
-                                        <Button onClick={handleAuthSubmit} variant="gold" className="w-full py-5 text-lg font-bold rounded-2xl" disabled={loading} isLoading={loading}>Kayıt Ol</Button>
-                                    </div>
+
+                                        {/* Toggle Login/Register - Only for Students or verified instructors (though instructors usually don't self-register in this logic) */}
+                                        {loginRole === UserRole.STUDENT && (
+                                            <div className="mt-8 text-center">
+                                                <button onClick={() => setAuthMode(authMode === 'LOGIN' ? 'REGISTER' : 'LOGIN')} className="text-sm font-bold text-gray-500 hover:text-amber-400 uppercase tracking-widest transition-colors">{authMode === 'LOGIN' ? 'Hesap Oluştur' : 'Giriş Yap'}</button>
+                                            </div>
+                                        )}
+                                    </>
                                   )}
-                                  <div className="mt-8 text-center">
-                                      <button onClick={() => setAuthMode(authMode === 'LOGIN' ? 'REGISTER' : 'LOGIN')} className="text-sm font-bold text-gray-500 hover:text-amber-400 uppercase tracking-widest transition-colors">{authMode === 'LOGIN' ? 'Hesap Oluştur' : 'Giriş Yap'}</button>
-                                  </div>
                              </div>
                          </div>
                      </div>
