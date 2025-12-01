@@ -12,7 +12,7 @@ import {
   Star, Trophy, Target, Rocket, Instagram, Twitter, Facebook, Linkedin, Map,
   CheckSquare, ArrowDown, BrainCircuit, BarChart3, Settings, UserPlus, FileCheck,
   Laptop, Paperclip, Mic, Video, VideoOff, MicOff, PhoneOff, Headphones, ShieldCheck,
-  Smartphone, Monitor, Lightbulb
+  Smartphone, Monitor, Lightbulb, Key
 } from 'lucide-react';
 import { 
   User, UserRole, Assignment, Submission, SubmissionStatus, 
@@ -23,6 +23,21 @@ import { generateAssignmentIdea, generateFeedbackSuggestion, generateQuizQuestio
 
 // Firebase Imports
 import { db, auth } from './services/firebase';
+
+// --- Constants ---
+const INSTRUCTOR_SECRET_CODE = "wasd123wasd";
+
+const CLASS_OPTIONS = [
+    "9-A", "9-B", "9-C", "9-D",
+    "10-A", "10-B", "10-C", "10-D",
+    "11-A", "11-B", "11-C", "11-D",
+    "12-A", "12-B", "12-C", "12-D",
+    "Mezun-A", "Mezun-B", "Hazırlık"
+];
+
+const FIELD_OPTIONS = [
+    "Sayısal", "Eşit Ağırlık", "Sözel", "Dil"
+];
 
 // --- Components ---
 
@@ -156,8 +171,12 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
     const [loginRole, setLoginRole] = useState<UserRole>(UserRole.STUDENT);
+    
+    // Auth Forms
     const [loginForm, setLoginForm] = useState({ email: '', password: '' });
     const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', tcNo: '', className: '', field: '' });
+    const [instructorCode, setInstructorCode] = useState('');
+    
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -165,14 +184,27 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
         setAuthMode(mode);
         setIsAuthModalOpen(true);
         setError(null);
+        setLoginForm({ email: '', password: '' });
+        setInstructorCode('');
     };
 
     const handleAuthSubmit = async () => {
         setLoading(true);
         setError(null);
+
+        // Instructor Security Check
+        if (loginRole === UserRole.INSTRUCTOR && instructorCode !== INSTRUCTOR_SECRET_CODE) {
+            setError("Hatalı Eğitmen Kodu! Yetkiniz bulunmuyor.");
+            setLoading(false);
+            return;
+        }
+
         try {
             if (authMode === 'LOGIN') {
-                const userCredential = await auth.signInWithEmailAndPassword(loginForm.email, loginForm.password);
+                if (!loginForm.email || !loginForm.password) {
+                   throw new Error("Lütfen e-posta ve şifrenizi giriniz.");
+                }
+                const userCredential = await auth.signInWithEmailAndPassword(loginForm.email.trim(), loginForm.password);
                 const userDoc = await db.collection("users").doc(userCredential.user!.uid).get();
                 if (userDoc.exists) {
                     onLoginSuccess({ id: userDoc.id, ...userDoc.data() } as User);
@@ -180,13 +212,16 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
                     setError("Kullanıcı verisi bulunamadı.");
                 }
             } else {
-                const userCredential = await auth.createUserWithEmailAndPassword(registerForm.email, registerForm.password);
+                if (!registerForm.email || !registerForm.password || !registerForm.name) {
+                    throw new Error("Lütfen zorunlu alanları doldurunuz.");
+                }
+                const userCredential = await auth.createUserWithEmailAndPassword(registerForm.email.trim(), registerForm.password);
                 const userData: User = {
                     id: userCredential.user!.uid,
                     name: registerForm.name,
                     role: loginRole,
-                    email: registerForm.email,
-                    pin: '', // Not used with Firebase Auth but kept for interface type
+                    email: registerForm.email.trim(),
+                    pin: '', 
                     avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${registerForm.name}`,
                     tcNo: registerForm.tcNo,
                     className: loginRole === UserRole.STUDENT ? registerForm.className : undefined,
@@ -197,7 +232,13 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
             }
         } catch (err: any) {
             console.error(err);
-            setError("Giriş/Kayıt başarısız: " + err.message);
+            let errorMessage = "İşlem başarısız.";
+            if (err.code === 'auth/invalid-email') errorMessage = "Geçersiz e-posta formatı.";
+            if (err.code === 'auth/user-not-found') errorMessage = "Kullanıcı bulunamadı.";
+            if (err.code === 'auth/wrong-password') errorMessage = "Hatalı şifre.";
+            if (err.code === 'auth/email-already-in-use') errorMessage = "Bu e-posta zaten kullanımda.";
+            if (err.message) errorMessage = err.message;
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -458,7 +499,7 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
              {/* AUTH MODAL - Dark/Premium Overlay to keep focus */}
              {isAuthModalOpen && (
                  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-500">
-                     <div className="relative w-full max-w-5xl h-[700px] bg-[#020617] rounded-[3rem] shadow-2xl flex overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500 ring-1 ring-white/5 relative">
+                     <div className="relative w-full max-w-5xl h-[750px] bg-[#020617] rounded-[3rem] shadow-2xl flex overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500 ring-1 ring-white/5 relative">
                           {/* Animated Background inside Modal */}
                          <div className="absolute inset-0 pointer-events-none z-0">
                             <div className="absolute top-[-50%] left-[-20%] w-[800px] h-[800px] bg-brand-600/10 rounded-full blur-[120px] animate-blob"></div>
@@ -488,37 +529,106 @@ const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLog
                                      <h2 className="text-3xl font-black text-white tracking-tight">{authMode === 'LOGIN' ? 'Hesabına Giriş Yap' : 'Yeni Hesap Oluştur'}</h2>
                                  </div>
                                  
-                                 {error && <div className="mb-4 p-3 bg-red-500/20 text-red-500 rounded-xl text-sm font-bold text-center">{error}</div>}
+                                 {error && <div className="mb-6 p-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-sm font-bold text-center animate-pulse">{error}</div>}
 
                                  <div className="flex bg-black/40 p-1.5 rounded-2xl mb-8 border border-white/10">
                                       <button onClick={() => setLoginRole(UserRole.STUDENT)} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${loginRole === UserRole.STUDENT ? 'bg-amber-500 text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}>Öğrenci</button>
                                       <button onClick={() => setLoginRole(UserRole.INSTRUCTOR)} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${loginRole === UserRole.INSTRUCTOR ? 'bg-amber-500 text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}>Eğitmen</button>
                                   </div>
 
+                                  {loginRole === UserRole.INSTRUCTOR && (
+                                     <div className="mb-6">
+                                        <div className="space-y-2 relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500"><Key size={18} /></div>
+                                            <input 
+                                                type="password"
+                                                name="instructorCode"
+                                                value={instructorCode}
+                                                onChange={e => setInstructorCode(e.target.value)}
+                                                placeholder="Özel Eğitmen Kodu" 
+                                                className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all"
+                                            />
+                                        </div>
+                                     </div>
+                                  )}
+
                                   {authMode === 'LOGIN' ? (
                                     <div className="space-y-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-gray-500 uppercase ml-2">E-posta</label>
-                                            <input type="email" value={loginForm.email} onChange={e => setLoginForm({...loginForm, email: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all focus:shadow-[0_0_20px_rgba(245,158,11,0.1)]" placeholder="ornek@enid.com" />
+                                            <input 
+                                                type="email" 
+                                                name="loginEmail"
+                                                autoComplete="email"
+                                                value={loginForm.email} 
+                                                onChange={e => setLoginForm({...loginForm, email: e.target.value})} 
+                                                className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all focus:shadow-[0_0_20px_rgba(245,158,11,0.1)]" 
+                                                placeholder="ornek@enid.com" 
+                                            />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-gray-500 uppercase ml-2">Şifre</label>
-                                            <input type="password" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all focus:shadow-[0_0_20px_rgba(245,158,11,0.1)]" placeholder="••••••" />
+                                            <input 
+                                                type="password" 
+                                                name="loginPassword"
+                                                autoComplete="current-password"
+                                                value={loginForm.password} 
+                                                onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
+                                                className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:bg-white/10 transition-all focus:shadow-[0_0_20px_rgba(245,158,11,0.1)]" 
+                                                placeholder="••••••" 
+                                            />
                                         </div>
-                                        <Button onClick={handleAuthSubmit} variant="gold" className="w-full py-5 text-lg font-bold mt-4 rounded-2xl" disabled={loading || !loginForm.email || !loginForm.password} isLoading={loading}>Giriş Yap</Button>
+                                        <Button onClick={handleAuthSubmit} variant="gold" className="w-full py-5 text-lg font-bold mt-4 rounded-2xl" disabled={loading} isLoading={loading}>Giriş Yap</Button>
                                     </div>
                                   ) : (
                                     <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                                        <input placeholder="Ad Soyad" value={registerForm.name} onChange={e => setRegisterForm({...registerForm, name: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" />
-                                        <input type="email" placeholder="E-posta" value={registerForm.email} onChange={e => setRegisterForm({...registerForm, email: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" />
+                                        <input 
+                                            type="text"
+                                            name="registerName"
+                                            placeholder="Ad Soyad" 
+                                            value={registerForm.name} 
+                                            onChange={e => setRegisterForm({...registerForm, name: e.target.value})} 
+                                            className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
+                                        />
+                                        <input 
+                                            type="email" 
+                                            name="registerEmail"
+                                            autoComplete="email"
+                                            placeholder="E-posta" 
+                                            value={registerForm.email} 
+                                            onChange={e => setRegisterForm({...registerForm, email: e.target.value})} 
+                                            className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
+                                        />
                                         {loginRole === UserRole.STUDENT && (
                                             <div className="grid grid-cols-2 gap-4">
-                                                <select value={registerForm.className} onChange={e => setRegisterForm({...registerForm, className: e.target.value})} className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-black focus:border-amber-500/50 outline-none"><option value="">Sınıf</option><option value="12-A">12-A</option><option value="11-B">11-B</option></select>
-                                                <select value={registerForm.field} onChange={e => setRegisterForm({...registerForm, field: e.target.value})} className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-black focus:border-amber-500/50 outline-none"><option value="">Alan</option><option value="Sayısal">Sayısal</option><option value="EA">EA</option></select>
+                                                <select 
+                                                    value={registerForm.className} 
+                                                    onChange={e => setRegisterForm({...registerForm, className: e.target.value})} 
+                                                    className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-black focus:border-amber-500/50 outline-none appearance-none"
+                                                >
+                                                    <option value="">Sınıf Seçiniz</option>
+                                                    {CLASS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                                <select 
+                                                    value={registerForm.field} 
+                                                    onChange={e => setRegisterForm({...registerForm, field: e.target.value})} 
+                                                    className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-black focus:border-amber-500/50 outline-none appearance-none"
+                                                >
+                                                    <option value="">Alan Seçiniz</option>
+                                                    {FIELD_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
                                             </div>
                                         )}
-                                        <input type="password" placeholder="Şifre Belirle" value={registerForm.password} onChange={e => setRegisterForm({...registerForm, password: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" />
-                                        <Button onClick={handleAuthSubmit} variant="gold" className="w-full py-5 text-lg font-bold rounded-2xl" disabled={loading || !registerForm.name || !registerForm.email || !registerForm.password} isLoading={loading}>Kayıt Ol</Button>
+                                        <input 
+                                            type="password" 
+                                            name="registerPassword"
+                                            autoComplete="new-password"
+                                            placeholder="Şifre Belirle" 
+                                            value={registerForm.password} 
+                                            onChange={e => setRegisterForm({...registerForm, password: e.target.value})} 
+                                            className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-amber-500/50 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all" 
+                                        />
+                                        <Button onClick={handleAuthSubmit} variant="gold" className="w-full py-5 text-lg font-bold rounded-2xl" disabled={loading} isLoading={loading}>Kayıt Ol</Button>
                                     </div>
                                   )}
                                   <div className="mt-8 text-center">
