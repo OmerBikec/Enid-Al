@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Enid AI</title>
+    <title>Enid AI - Yeni Nesil Eğitim</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -27,23 +27,20 @@
                 900: '#1e3a8a',
                 950: '#172554',
               },
-              dark: {
-                bg: '#0f172a',
-                card: '#1e293b',
-                text: '#f8fafc',
-                border: '#334155'
-              }
             },
             boxShadow: {
               'glow': '0 0 20px rgba(59, 130, 246, 0.5)',
-              'glow-lg': '0 0 30px rgba(59, 130, 246, 0.6)',
-              'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-              '3d': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              'glow-lg': '0 0 40px rgba(59, 130, 246, 0.4)',
+              'card': '0 10px 30px -10px rgba(0, 0, 0, 0.05)',
+              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
             },
             animation: {
-              blob: "blob 7s infinite",
-              'spin-slow': 'spin 3s linear infinite',
-              float: 'float 3s ease-in-out infinite',
+              blob: "blob 20s infinite",
+              'spin-slow': 'spin 12s linear infinite',
+              float: 'float 6s ease-in-out infinite',
+              'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'shimmer': 'shimmer 2s linear infinite',
+              'slide-up': 'slideUp 0.5s ease-out forwards',
             },
             keyframes: {
               blob: {
@@ -54,53 +51,72 @@
               },
               float: {
                 "0%, 100%": { transform: "translateY(0)" },
-                "50%": { transform: "translateY(-10px)" },
+                "50%": { transform: "translateY(-15px)" },
+              },
+              shimmer: {
+                "0%": { backgroundPosition: "-200% 0" },
+                "100%": { backgroundPosition: "200% 0" }
+              },
+              slideUp: {
+                "0%": { opacity: 0, transform: "translateY(20px)" },
+                "100%": { opacity: 1, transform: "translateY(0)" }
               }
             },
           }
         }
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
       body { font-family: 'Outfit', sans-serif; }
       
-      /* Glassmorphism Utilities */
-      .glass {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-      }
-      .dark .glass {
-        background: rgba(30, 41, 59, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-      }
-
-      /* Scrollbar */
-      .hide-scrollbar::-webkit-scrollbar {
+      /* Ultramodern Scrollbar */
+      ::-webkit-scrollbar {
         width: 6px;
+        height: 6px;
       }
-      .hide-scrollbar::-webkit-scrollbar-track {
+      ::-webkit-scrollbar-track {
         background: transparent;
       }
-      .hide-scrollbar::-webkit-scrollbar-thumb {
-        background-color: rgba(156, 163, 175, 0.5);
-        border-radius: 20px;
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* Advanced Glass Panel */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      }
+      .dark .glass-panel {
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(32px);
+        -webkit-backdrop-filter: blur(32px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Noise Texture Overlay */
+      .bg-noise {
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
       }
       
-      /* Custom Animations delays */
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
       .animation-delay-2000 { animation-delay: 2s; }
       .animation-delay-4000 { animation-delay: 4s; }
       
-      /* Staggered List Animation */
-      .stagger-enter {
-        opacity: 0;
-        transform: translateY(20px);
-        animation: slideUp 0.5s ease forwards;
-      }
-      @keyframes slideUp {
-        to { opacity: 1; transform: translateY(0); }
+      ::selection {
+        background: #f59e0b;
+        color: white;
       }
     </style>
   <script type="importmap">
@@ -115,7 +131,7 @@
 }
 </script>
 </head>
-  <body class="bg-[#F3F4F6] dark:bg-slate-950 text-gray-900 dark:text-gray-100 antialiased overflow-hidden transition-colors duration-500 selection:bg-brand-500 selection:text-white">
+  <body class="bg-[#F8FAFC] dark:bg-[#020617] text-gray-900 dark:text-gray-100 antialiased overflow-x-hidden transition-colors duration-500 bg-noise">
     <div id="root"></div>
   </body>
 </html>
