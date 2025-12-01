@@ -23,7 +23,6 @@ import { generateAssignmentIdea, generateFeedbackSuggestion, generateQuizQuestio
 
 // Firebase Imports
 import { db, auth } from './services/firebase';
-import firebase from 'firebase/app';
 
 // --- Components ---
 
@@ -993,4 +992,165 @@ const App: React.FC = () => {
                       <div className="space-y-4 max-w-3xl">
                           {q.options?.map((opt, i) => (
                               <button key={i} onClick={() => handleAnswerExam(opt)} 
-                                className={`w-full p-5 text-left rounded-2xl border transition-all duration-300 group ${activeExamSession.answers[q.id] === opt ? 'border-brand-500 bg-brand-500/10 shadow-lg shadow-brand-500/10' : 'border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/
+                                className={`w-full p-5 text-left rounded-2xl border transition-all duration-300 group ${activeExamSession.answers[q.id] === opt ? 'border-brand-500 bg-brand-500/10 shadow-lg shadow-brand-500/10' : 'border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10'}`}>
+                                  <div className="flex items-center justify-between">
+                                      <span className="font-medium">{opt}</span>
+                                      {activeExamSession.answers[q.id] === opt && <CheckCircle size={20} className="text-brand-500"/>}
+                                  </div>
+                              </button>
+                          ))}
+                      </div>
+                      <div className="mt-10 flex justify-end">
+                          {activeExamSession.currentQuestion < activeExamSession.exam.questions.length - 1 ? (
+                              <Button onClick={() => setActiveExamSession({...activeExamSession, currentQuestion: activeExamSession.currentQuestion + 1})} variant="primary" className="px-8 py-4 text-lg">
+                                  Sonraki Soru <ChevronRight className="ml-2" />
+                              </Button>
+                          ) : (
+                              <Button onClick={submitExam} variant="gold" className="px-8 py-4 text-lg">
+                                  Sınavı Bitir <CheckCircle className="ml-2" />
+                              </Button>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          );
+      }
+
+      // Default Dashboard View
+      return (
+          <div className="animate-in fade-in duration-500">
+              <header className="mb-10 flex justify-between items-center">
+                  <div>
+                      <h1 className="text-4xl font-black text-white mb-2">Merhaba, {user?.name.split(' ')[0]} 👋</h1>
+                      <p className="text-gray-400">Bugün öğrenmek için harika bir gün.</p>
+                  </div>
+                  <div className="flex gap-4">
+                      <Button variant="secondary" className="h-12 w-12 rounded-full p-0 flex items-center justify-center"><Bell size={20}/></Button>
+                      <img src={user?.avatarUrl} className="w-12 h-12 rounded-full bg-brand-500/20 border border-brand-500/30" alt="Profile"/>
+                  </div>
+              </header>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                  <DashboardCard title="Genel Ort." value="84.5" subtitle="Başarılı" icon={TrendingUp} trend="+2.4" colorClass="text-brand-500" />
+                  <DashboardCard title="Tamamlanan" value="12" subtitle="Ödev" icon={CheckCircle} colorClass="text-green-500" />
+                  <DashboardCard title="Bekleyen" value="3" subtitle="Ödev" icon={Clock} colorClass="text-orange-500" />
+                  <DashboardCard title="Sıralama" value="#4" subtitle="Sınıf" icon={Award} trend="+1" colorClass="text-purple-500" />
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                   <div className="lg:col-span-2 glass-panel p-8 rounded-[2.5rem]">
+                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><BookOpen size={20} className="text-brand-500"/> Son Ödevler</h3>
+                       <div className="space-y-4">
+                           {assignments.slice(0, 3).map(a => (
+                               <div key={a.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center hover:bg-white/10 transition-colors cursor-pointer">
+                                   <div>
+                                       <h4 className="font-bold text-white">{a.title}</h4>
+                                       <p className="text-sm text-gray-500">{a.subject} • {new Date(a.dueDate).toLocaleDateString()}</p>
+                                   </div>
+                                   <ChevronRight className="text-gray-600"/>
+                               </div>
+                           ))}
+                           {assignments.length === 0 && <p className="text-gray-500 text-center py-4">Henüz ödev yok.</p>}
+                       </div>
+                   </div>
+                   <div className="glass-panel p-8 rounded-[2.5rem]">
+                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Megaphone size={20} className="text-amber-500"/> Duyurular</h3>
+                        <div className="space-y-6">
+                            {announcements.slice(0, 3).map(a => (
+                                <div key={a.id} className="relative pl-6 border-l-2 border-white/10">
+                                    <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-brand-500"></div>
+                                    <p className="text-sm text-gray-300 mb-1">{a.content}</p>
+                                    <span className="text-xs text-gray-600 font-bold uppercase">{new Date(a.date).toLocaleDateString()}</span>
+                                </div>
+                            ))}
+                        </div>
+                   </div>
+              </div>
+          </div>
+      );
+  };
+
+  return (
+    <div className={`flex min-h-screen transition-colors duration-300 ${darkMode ? 'bg-[#020617] text-white' : 'bg-gray-50 text-gray-900'}`}>
+        {/* Sidebar */}
+        <aside className={`${collapsed ? 'w-20' : 'w-72'} bg-[#0f172a]/80 backdrop-blur-xl border-r border-white/10 flex flex-col transition-all duration-300 fixed h-full z-40`}>
+            <div className="p-6 flex items-center justify-between">
+                {!collapsed && (
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">E</div>
+                        <span className="text-lg font-black tracking-tight">Enid<span className="text-brand-500">AI</span></span>
+                    </div>
+                )}
+                <button onClick={() => setCollapsed(!collapsed)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                    <Menu size={20} className="text-gray-400"/>
+                </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-6 custom-scrollbar">
+                <div className="px-6 mb-4 text-xs font-bold text-gray-500 uppercase tracking-widest hidden md:block">{!collapsed && 'Menü'}</div>
+                <SidebarItem icon={Layout} label="Panel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} collapsed={collapsed} />
+                <SidebarItem icon={BookOpen} label="Ödevler" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} collapsed={collapsed} />
+                <SidebarItem icon={FileText} label="Sınavlar" active={activeTab === 'exams'} onClick={() => setActiveTab('exams')} collapsed={collapsed} />
+                <SidebarItem icon={Users} label="Öğrenciler" active={activeTab === 'students'} onClick={() => setActiveTab('students')} collapsed={collapsed} role={user?.role} />
+                <SidebarItem icon={Bot} label="AI Asistan" active={activeTab === 'chat'} onClick={() => setActiveTab('chat')} collapsed={collapsed} />
+            </div>
+
+            <div className="p-4 border-t border-white/10">
+                <button onClick={handleLogout} className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 w-full rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors`}>
+                    <LogOut size={20} />
+                    {!collapsed && <span className="ml-3 font-medium">Çıkış Yap</span>}
+                </button>
+            </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <main className={`flex-1 transition-all duration-300 ${collapsed ? 'ml-20' : 'ml-72'} p-8 md:p-12`}>
+            {renderContent()}
+        </main>
+
+        {/* Floating Call Overlay */}
+        {activeCall && <CallOverlay session={activeCall} onEnd={() => setActiveCall(null)} />}
+        
+        {/* Modals would go here (simplified) */}
+        {isModalOpen.isOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                <div className="bg-[#0f172a] p-8 rounded-[2rem] border border-white/10 w-full max-w-md">
+                     <div className="flex justify-between items-center mb-6">
+                         <h3 className="text-xl font-bold text-white">Yeni Ekle</h3>
+                         <button onClick={() => setIsModalOpen({type:'', isOpen: false})}><X size={24} className="text-gray-500"/></button>
+                     </div>
+                     <div className="space-y-4">
+                         {isModalOpen.type === 'ASSIGNMENT' && (
+                             <>
+                                <input placeholder="Başlık" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white" onChange={e => setFormData({...formData, title: e.target.value})} />
+                                <textarea placeholder="Açıklama" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white" onChange={e => setFormData({...formData, description: e.target.value})} />
+                                <input type="date" className="w-full p-4 bg-white/5 rounded-xl border border-white/10 text-white" onChange={e => setFormData({...formData, dueDate: e.target.value})} />
+                                <Button onClick={handleAddAssignment} className="w-full py-4">Oluştur</Button>
+                                <div className="relative my-4 text-center border-t border-white/10">
+                                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#0f172a] px-2 text-xs text-gray-500">YA DA</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-gray-400">Yapay Zeka ile Oluştur</p>
+                                    <div className="flex gap-2">
+                                        <input placeholder="Konu (örn: Türev)" className="flex-1 p-3 bg-white/5 rounded-xl border border-white/10 text-white text-sm" value={assignmentTopic} onChange={e => setAssignmentTopic(e.target.value)} />
+                                        <Button onClick={handleGenerateAssignment} variant="luxury" className="px-4" isLoading={isGeneratingAssignment}><Sparkles size={16}/></Button>
+                                    </div>
+                                    {generatedAssignment && (
+                                        <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                                            <p className="font-bold text-green-400 mb-1">{generatedAssignment.title}</p>
+                                            <p className="text-xs text-green-300 line-clamp-2">{generatedAssignment.description}</p>
+                                            <button onClick={() => setFormData({...formData, title: generatedAssignment.title, description: generatedAssignment.description})} className="text-xs font-bold text-green-400 mt-2 underline">Bunu Kullan</button>
+                                        </div>
+                                    )}
+                                </div>
+                             </>
+                         )}
+                     </div>
+                </div>
+            </div>
+        )}
+    </div>
+  );
+};
+
+export default App;
