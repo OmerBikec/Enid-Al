@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr" class="scroll-smooth">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Enid AI - Yeni Nesil Eğitim</title>
+    <title>Enid AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -29,23 +29,17 @@
               },
             },
             boxShadow: {
-              'glow': '0 0 40px rgba(59, 130, 246, 0.5)',
-              'glow-lg': '0 0 60px rgba(59, 130, 246, 0.4)',
-              'glow-amber': '0 0 40px rgba(245, 158, 11, 0.4)',
-              'card': '0 10px 30px -10px rgba(0, 0, 0, 0.5)',
-              'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
-              'neon': '0 0 10px rgba(255,255,255,0.5), 0 0 20px rgba(255,255,255,0.3)',
+              'glow': '0 0 20px rgba(59, 130, 246, 0.5)',
+              'glow-lg': '0 0 30px rgba(59, 130, 246, 0.6)',
+              'card': '0 10px 30px -10px rgba(0, 0, 0, 0.05)',
+              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
             },
             animation: {
-              blob: "blob 20s infinite",
-              'spin-slow': 'spin 12s linear infinite',
-              float: 'float 6s ease-in-out infinite',
-              'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'shimmer': 'shimmer 2.5s linear infinite',
-              'slide-up': 'slideUp 0.8s ease-out forwards',
-              'aurora': 'aurora 20s linear infinite',
-              'scroll': 'scroll 30s linear infinite',
-              'spotlight': 'spotlight 2s ease .75s 1 forwards',
+              blob: "blob 10s infinite",
+              'spin-slow': 'spin 8s linear infinite',
+              float: 'float 4s ease-in-out infinite',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'shimmer': 'shimmer 2s linear infinite',
             },
             keyframes: {
               blob: {
@@ -56,149 +50,76 @@
               },
               float: {
                 "0%, 100%": { transform: "translateY(0)" },
-                "50%": { transform: "translateY(-15px)" },
+                "50%": { transform: "translateY(-10px)" },
               },
               shimmer: {
                 "0%": { backgroundPosition: "-200% 0" },
                 "100%": { backgroundPosition: "200% 0" }
-              },
-              slideUp: {
-                "0%": { opacity: 0, transform: "translateY(40px)" },
-                "100%": { opacity: 1, transform: "translateY(0)" }
-              },
-              aurora: {
-                "0%": { backgroundPosition: "50% 50%", filter: "hue-rotate(0deg)" },
-                "100%": { backgroundPosition: "350% 50%", filter: "hue-rotate(360deg)" }
-              },
-              scroll: {
-                "0%": { transform: "translateX(0)" },
-                "100%": { transform: "translateX(-50%)" }
-              },
-              spotlight: {
-                "0%": { opacity: 0, transform: "translate(-50%, -150%) scale(0.5)" },
-                "100%": { opacity: 1, transform: "translate(-50%, 0) scale(1)" }
               }
             },
-            backgroundImage: {
-              'grid-pattern': "linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)",
-              'aurora-gradient': "linear-gradient(to right bottom, #4338ca, #3b82f6, #0ea5e9)",
-            }
           }
         }
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
       body { font-family: 'Outfit', sans-serif; }
       
-      /* Ultramodern Scrollbar */
+      /* Modern Scrollbar */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: #020617;
+        background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 99px;
-        border: 2px solid #020617;
+        background: rgba(156, 163, 175, 0.3);
+        border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.3);
+        background: rgba(156, 163, 175, 0.5);
       }
 
-      /* Advanced Glass Panel */
+      /* Ultramodern Glass */
       .glass-panel {
-        background: rgba(255, 255, 255, 0.02);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+      .dark .glass-panel {
+        background: rgba(15, 23, 42, 0.65);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-      }
-      
-      .glass-card-hover {
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      }
-      .glass-card-hover:hover {
-        background: rgba(255, 255, 255, 0.05);
-        border-color: rgba(255, 255, 255, 0.2);
-        transform: translateY(-5px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
       }
 
-      /* Noise Texture Overlay */
+      /* Noise Texture */
       .bg-noise {
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
       }
       
       .hide-scrollbar::-webkit-scrollbar {
         display: none;
       }
 
+      /* Animation Delays */
       .animation-delay-2000 { animation-delay: 2s; }
       .animation-delay-4000 { animation-delay: 4s; }
-      
-      ::selection {
-        background: #f59e0b;
-        color: black;
-      }
-      
-      .text-gradient {
-        background: linear-gradient(to right, #fbbf24, #f59e0b, #d97706);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-      
-      .text-gradient-blue {
-        background: linear-gradient(to right, #60a5fa, #3b82f6, #2563eb);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-      
-      .perspective-1000 {
-        perspective: 2000px;
-      }
-      
-      .transform-style-3d {
-        transform-style: preserve-3d;
-      }
-      
-      .rotate-y-12 {
-        transform: rotateY(12deg) rotateX(5deg);
-      }
-
-      /* Custom Input Autofill fix for dark mode */
-      input:-webkit-autofill,
-      input:-webkit-autofill:hover, 
-      input:-webkit-autofill:focus, 
-      input:-webkit-autofill:active{
-          -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
-          -webkit-text-fill-color: white !important;
-          transition: background-color 5000s ease-in-out 0s;
-      }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react/": "https://esm.sh/react@18.2.0/",
-    "react": "https://esm.sh/react@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai",
-    "lucide-react": "https://esm.sh/lucide-react@0.294.0",
-    "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js",
-    "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-    "vite": "https://aistudiocdn.com/vite@^7.2.6"
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/"
   }
 }
 </script>
 </head>
-  <body class="bg-[#020617] text-gray-100 antialiased overflow-x-hidden bg-noise">
+  <body class="bg-[#F1F5F9] dark:bg-[#020617] text-gray-900 dark:text-gray-100 antialiased overflow-hidden transition-colors duration-500 selection:bg-brand-500 selection:text-white bg-noise">
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
   </body>
 </html>

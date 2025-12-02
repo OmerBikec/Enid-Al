@@ -113,38 +113,24 @@ export interface ChatMessage {
 }
 
 // Human to Human Chat
-export type MessageType = 'text' | 'image' | 'audio' | 'file';
-
 export interface Message {
   id: string;
   senderId: string;
-  text?: string;
-  fileUrl?: string;
-  messageType: MessageType;
-  fileName?: string; // For files
-  duration?: string; // For audio
+  text: string;
   timestamp: string;
 }
 
 export interface Conversation {
   id: string;
-  participantId: string; // The other person's ID
-  participantName: string;
-  participantAvatar: string;
-  participantRole: UserRole;
-  lastMessage: string;
-  unreadCount: number;
+  studentId: string;
+  studentName: string;
+  studentAvatar: string;
+  instructorId: string;
+  instructorName: string;
+  instructorAvatar: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
   messages: Message[];
-  status: 'active' | 'archived';
-}
-
-export interface CallSession {
-  isActive: boolean;
-  participantName: string;
-  participantAvatar: string;
-  type: 'voice' | 'video';
-  status: 'calling' | 'connected' | 'ended';
-  duration: number; // in seconds
+  lastMessageAt: string;
 }
 
 // New Modules

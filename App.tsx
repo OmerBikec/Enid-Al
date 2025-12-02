@@ -11,55 +11,34 @@ import {
   EyeOff, Fingerprint, MessageCircle, Check, XCircle, Info, CheckCheck, Scan, 
   MoreHorizontal, Bookmark, Timer, UserCheck, Building2, ArrowUpRight, ArrowDownLeft,
   Star, Trophy, Target, Rocket, Instagram, Twitter, Facebook, Linkedin, Map,
-  CheckSquare, ArrowDown, BrainCircuit, BarChart3, Settings, UserPlus, FileCheck,
-  Laptop, Paperclip, Mic, Video, VideoOff, MicOff, PhoneOff, Headphones, ShieldCheck,
-  Smartphone, Monitor, Lightbulb, Key, Unlock, LogIn, Hash
+  Cpu, Server, Radio, BarChart3, Grip, Paperclip, Mic, Video, Laptop, Folder
 } from 'lucide-react';
 import { 
   User, UserRole, Assignment, Submission, SubmissionStatus, 
   Announcement, Notification, Exam, Question, ExamResult, ChatMessage,
-  StudySession, Project, AttendanceRecord, Conversation, Message, MessageType, CallSession
+  StudySession, Project, AttendanceRecord, Conversation, Message
 } from './types';
 import { generateAssignmentIdea, generateFeedbackSuggestion, generateQuizQuestions, chatWithStudentAssistant } from './services/geminiService';
-
-// Firebase Imports
 import { db, auth } from './services/firebase';
-
-// --- Constants ---
-const INSTRUCTOR_SECRET_CODE = "wasd123wasd";
-
-const CLASS_OPTIONS = [
-    "9-A", "9-B", "9-C", "9-D",
-    "10-A", "10-B", "10-C", "10-D",
-    "11-A", "11-B", "11-C", "11-D",
-    "12-A", "12-B", "12-C", "12-D",
-    "Mezun", "Hazırlık"
-];
-
-const FIELD_OPTIONS = [
-    "Sayısal", "Eşit Ağırlık", "Sözel", "Dil"
-];
 
 // --- Components ---
 
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'luxury' | 'gold' | 'glass', isLoading?: boolean }> = ({ 
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'luxury', isLoading?: boolean }> = ({ 
   children, variant = 'primary', className = '', isLoading, ...props 
 }) => {
-  const baseStyle = "inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95 text-sm";
+  const baseStyle = "inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98] text-sm tracking-wide";
   
   const variants = {
-    primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-sm",
-    secondary: "bg-slate-700 text-gray-200 hover:bg-slate-600 border border-slate-600",
-    outline: "bg-transparent border border-slate-600 text-slate-300 hover:border-slate-400 hover:text-white",
-    ghost: "bg-transparent text-slate-400 hover:text-white hover:bg-slate-800",
-    danger: "bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20",
-    luxury: "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 border-0",
-    gold: "bg-amber-500 text-black hover:bg-amber-400 font-bold shadow-lg shadow-amber-500/30",
-    glass: "bg-white/5 backdrop-blur-md border border-white/10 text-white hover:bg-white/10"
+    primary: "bg-brand-600 text-white shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:bg-brand-700 border border-transparent hover:-translate-y-0.5",
+    secondary: "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 shadow-sm hover:shadow-md hover:-translate-y-0.5",
+    outline: "bg-transparent border-2 border-brand-600 text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800 hover:shadow-glow",
+    ghost: "bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white",
+    danger: "bg-red-500 text-white shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:bg-red-600 border border-transparent",
+    luxury: "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg shadow-orange-500/40 hover:shadow-orange-500/60 hover:-translate-y-1 border-0"
   };
 
   return (
-    <button type="button" className={`${baseStyle} ${variants[variant]} ${className}`} disabled={isLoading || props.disabled} {...props}>
+    <button className={`${baseStyle} ${variants[variant]} ${className}`} disabled={isLoading || props.disabled} {...props}>
       {isLoading ? (
         <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -71,1489 +50,1618 @@ const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant
   );
 };
 
+const Badge: React.FC<{ status: string, className?: string }> = ({ status, className = '' }) => {
+  const styles: Record<string, string> = {
+    PENDING: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800",
+    SUBMITTED: "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800",
+    GRADED: "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/40 dark:text-teal-300 dark:border-teal-800",
+    UPCOMING: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800",
+    COMPLETED: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
+    CANCELLED: "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-800",
+    IN_PROGRESS: "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800",
+    ON_TIME: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800",
+    LATE: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800",
+    ABSENT: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800",
+    HIGH: "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900/40 dark:text-pink-300 dark:border-pink-800",
+    NORMAL: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800",
+  };
+  
+  const labels: Record<string, string> = {
+    PENDING: "Bekliyor", SUBMITTED: "Teslim Edildi", GRADED: "Notlandı",
+    UPCOMING: "Yaklaşıyor", COMPLETED: "Tamamlandı", CANCELLED: "İptal",
+    IN_PROGRESS: "Sürüyor", ON_TIME: "Zamanında", LATE: "Geç",
+    ABSENT: "Yok", HIGH: "Önemli", NORMAL: "Normal"
+  };
+
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm ${styles[status] || 'bg-gray-100 text-gray-600'} ${className}`}>
+      {labels[status] || status}
+    </span>
+  );
+};
+
 const SidebarItem: React.FC<{
   icon: React.ElementType;
   label: string;
-  active: boolean;
+  isActive?: boolean;
+  collapsed?: boolean;
   onClick: () => void;
-  collapsed: boolean;
-  badge?: number;
-}> = ({ icon: Icon, label, active, onClick, collapsed, badge }) => {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={collapsed ? label : undefined}
-      className={`relative flex items-center w-full py-3 px-4 transition-colors duration-200
-      ${active 
-          ? 'bg-brand-600 text-white border-r-4 border-brand-300' 
-          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-      } ${collapsed ? 'justify-center px-2' : ''}`}
-    >
-      <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-      
-      {!collapsed && (
-        <span className="ml-3 font-medium text-sm">
+  colorClass?: string;
+}> = ({ icon: Icon, label, isActive, collapsed, onClick, colorClass = "text-brand-500" }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`w-full flex items-center transition-all duration-300 group relative mb-2
+      ${collapsed ? 'justify-center p-3' : 'px-4 py-3.5'}
+      ${isActive 
+        ? 'bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-md shadow-glow border border-white/10' 
+        : 'hover:bg-white/5 hover:backdrop-blur-sm text-slate-400 hover:text-white'}
+      rounded-2xl
+    `}
+  >
+    {isActive && (
+       <div className={`absolute inset-y-0 left-0 w-1 rounded-full bg-gradient-to-b from-transparent via-current to-transparent opacity-50 ${colorClass}`}></div>
+    )}
+    <Icon 
+      size={collapsed ? 24 : 20} 
+      className={`transition-all duration-300 ${isActive ? `${colorClass} scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]` : 'group-hover:text-white group-hover:scale-105'}`} 
+    />
+    {!collapsed && (
+      <span className={`ml-3.5 font-semibold tracking-tight ${isActive ? 'text-white' : ''}`}>
+        {label}
+      </span>
+    )}
+    {collapsed && isActive && (
+        <div className="absolute left-full ml-4 px-3 py-1 bg-slate-900 text-white text-xs rounded-md shadow-xl whitespace-nowrap z-50 animate-in fade-in slide-in-from-left-2">
             {label}
-        </span>
-      )}
-       {badge !== undefined && badge > 0 && (
-          <span className={`absolute top-2 right-2 flex h-2 w-2 items-center justify-center rounded-full bg-red-500 text-[10px]`}>{badge}</span>
-        )}
-    </button>
-  );
-};
-
-const StatCard: React.FC<{
-  title: string; value: string; icon: React.ElementType; color: string;
-}> = ({ title, value, icon: Icon, color }) => (
-    <div className="bg-slate-800 border border-slate-700 p-6 rounded-lg flex items-start justify-between shadow-sm">
-        <div>
-            <p className="text-slate-400 text-sm font-medium mb-1">{title}</p>
-            <h3 className="text-2xl font-bold text-white">{value}</h3>
         </div>
-        <div className={`p-3 rounded-lg bg-opacity-10 ${color.replace('text-', 'bg-')} ${color}`}>
-            <Icon size={24} />
-        </div>
-    </div>
+    )}
+  </button>
 );
 
-const EmptyState: React.FC<{ icon: React.ElementType, title: string, description: string }> = ({ icon: Icon, title, description }) => (
-  <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-700 rounded-lg bg-slate-800/50 text-center w-full">
-    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-slate-500">
-      <Icon size={32} />
-    </div>
-    <h3 className="text-lg font-bold text-white mb-1">{title}</h3>
-    <p className="text-slate-500 text-sm max-w-xs">{description}</p>
+const DashboardCard: React.FC<{
+  title: string; value: string; subtitle: string; icon: React.ElementType; trend?: string; colorClass: string; className?: string;
+}> = ({ title, value, subtitle, icon: Icon, trend, colorClass, className = '' }) => (
+  <div className={`group relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#0f172a]/40 p-6 transition-all duration-500 hover:border-white/10 hover:-translate-y-1 ${className}`}>
+        {/* Subtle Background Icon Watermark */}
+        <Icon className={`absolute -right-4 -bottom-4 w-32 h-32 opacity-[0.03] transition-transform duration-700 group-hover:scale-110 group-hover:rotate-12 ${colorClass}`} />
+        
+        <div className="relative z-10 flex flex-col justify-between h-full">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-4">
+               <div className={`p-2.5 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm ${colorClass}`}>
+                  <Icon size={20} />
+               </div>
+               {trend && (
+                 <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md bg-white/5 border border-white/5 ${trend.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {trend}
+                 </span>
+               )}
+            </div>
+
+            {/* Value & Title */}
+            <div>
+                <h3 className="text-5xl font-extralight tracking-tighter text-white tabular-nums mb-1">{value}</h3>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">{title}</p>
+            </div>
+            
+            {/* Footer / Subtitle */}
+            <div className="mt-6 flex items-center justify-between">
+               <p className="text-xs text-gray-400 font-medium">{subtitle}</p>
+            </div>
+        </div>
+
+        {/* Bottom Active Line */}
+        <div className={`absolute bottom-0 left-0 h-0.5 w-full ${colorClass.replace('text-', 'bg-')} opacity-50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-700 origin-left`}></div>
   </div>
 );
 
-const Marquee: React.FC<{ items: string[] }> = ({ items }) => {
-  return (
-    <div className="relative flex overflow-x-hidden border-y border-white/5 bg-white/5 py-4">
-      <div className="animate-marquee whitespace-nowrap flex flex-row">
-        {items.map((item, index) => (
-          <div key={index} className="mx-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-gray-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-500"></span>
-            {item}
-          </div>
-        ))}
-        {items.map((item, index) => (
-          <div key={`dup-${index}`} className="mx-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-gray-400">
-             <span className="h-1.5 w-1.5 rounded-full bg-brand-500"></span>
-            {item}
-          </div>
-        ))}
-      </div>
+const EmptyState: React.FC<{
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  action?: { label: string; onClick: () => void };
+}> = ({ icon: Icon, title, description, action }) => (
+  <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+    <div className="w-24 h-24 rounded-full bg-slate-800/50 flex items-center justify-center mb-6 shadow-inner ring-1 ring-white/10">
+      <Icon size={40} className="text-slate-500 opacity-50" />
     </div>
-  );
-};
+    <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+    <p className="text-slate-400 max-w-sm mb-8 leading-relaxed">{description}</p>
+    {action && (
+      <Button variant="outline" onClick={action.onClick} className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
+        {action.label}
+      </Button>
+    )}
+  </div>
+);
 
-// --- Landing Page with Integrated Auth Modal ---
-const LandingPage: React.FC<{ onLoginSuccess: (user: User) => void }> = ({ onLoginSuccess }) => {
-    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-    const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
-    const [loginRole, setLoginRole] = useState<UserRole>(UserRole.STUDENT);
-    
-    // Instructor Verification State
-    const [instructorCode, setInstructorCode] = useState('');
-    const [isInstructorVerified, setIsInstructorVerified] = useState(false);
+// --- Main App ---
 
-    // Auth Forms
-    const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-    const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', tcNo: '', className: '', field: '' });
-    
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const openAuth = (mode: 'LOGIN' | 'REGISTER') => {
-        setAuthMode(mode);
-        setIsAuthModalOpen(true);
-        setError(null);
-        setLoginForm({ email: '', password: '' });
-        setRegisterForm({ name: '', email: '', password: '', tcNo: '', className: '', field: '' });
-        setInstructorCode('');
-        setIsInstructorVerified(false);
-        setLoginRole(UserRole.STUDENT);
-    };
-
-    useEffect(() => {
-        if (loginRole === UserRole.STUDENT) {
-            setIsInstructorVerified(false);
-            setInstructorCode('');
-        }
-        setError(null);
-    }, [loginRole]);
-
-    const handleVerifyInstructor = () => {
-        if (instructorCode === INSTRUCTOR_SECRET_CODE) {
-            setIsInstructorVerified(true);
-            setError(null);
-        } else {
-            setError("Hatalı Eğitmen Kodu! Erişim reddedildi.");
-        }
-    };
-
-    const validateEmail = (email: string) => {
-        return String(email)
-            .toLowerCase()
-            .match(
-                /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-            );
-    };
-
-    const handleAuthSubmit = async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            if (authMode === 'LOGIN') {
-                const email = loginForm.email.trim();
-                const password = loginForm.password;
-
-                if (!email || !password) throw new Error("Lütfen e-posta ve şifrenizi giriniz.");
-                if (!validateEmail(email)) throw new Error("Geçersiz e-posta formatı.");
-
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                const userDoc = await db.collection("users").doc(userCredential.user!.uid).get();
-                
-                if (userDoc.exists) {
-                    const userData = userDoc.data() as User;
-                    if (userData.role !== loginRole) {
-                        throw new Error(`Bu hesap bir ${loginRole === UserRole.INSTRUCTOR ? 'Öğrenci' : 'Eğitmen'} hesabıdır.`);
-                    }
-                    onLoginSuccess({ id: userDoc.id, ...userData });
-                } else {
-                    throw new Error("Kullanıcı verisi bulunamadı.");
-                }
-            } else {
-                // REGISTER
-                const email = registerForm.email.trim();
-                const password = registerForm.password;
-                
-                if (!email || !password || !registerForm.name) throw new Error("Lütfen zorunlu alanları doldurunuz.");
-                if (!validateEmail(email)) throw new Error("Geçersiz e-posta formatı.");
-
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                
-                const userData: User = {
-                    id: userCredential.user!.uid,
-                    name: registerForm.name,
-                    role: loginRole,
-                    email: email,
-                    pin: '', 
-                    avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${registerForm.name}`,
-                    tcNo: registerForm.tcNo || '',
-                    className: loginRole === UserRole.STUDENT && registerForm.className ? registerForm.className : undefined,
-                    field: loginRole === UserRole.STUDENT && registerForm.field ? registerForm.field : undefined
-                };
-
-                const safeUserData = JSON.parse(JSON.stringify(userData));
-                
-                await db.collection("users").doc(userCredential.user!.uid).set(safeUserData);
-                onLoginSuccess(userData);
-            }
-        } catch (err: any) {
-            console.error(err);
-            let errorMessage = "İşlem başarısız.";
-            if (err.code === 'auth/invalid-email') errorMessage = "Geçersiz e-posta formatı.";
-            else if (err.code === 'auth/user-not-found') errorMessage = "Kullanıcı bulunamadı. Lütfen kayıt olun.";
-            else if (err.code === 'auth/wrong-password') errorMessage = "Hatalı şifre.";
-            else if (err.code === 'auth/email-already-in-use') errorMessage = "Bu e-posta adresi zaten kullanımda.";
-            else if (err.code === 'auth/invalid-credential') errorMessage = "Hatalı giriş bilgileri veya hesap bulunamadı.";
-            else if (err.message) errorMessage = err.message;
-
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const scrollToSection = (id: string) => {
-        const element = document.getElementById(id);
-        if (element) element.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    return (
-        <div className="min-h-screen bg-[#020617] text-white relative overflow-x-hidden selection:bg-amber-500 selection:text-white scroll-smooth font-sans">
-             {/* Background Effects */}
-             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                 <div className="absolute inset-0 bg-grid-pattern bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)] opacity-20"></div>
-                 {/* Aurora */}
-                 <div className="absolute top-[-20%] left-[20%] w-[60vw] h-[60vh] bg-brand-600/20 rounded-full blur-[150px] animate-blob"></div>
-                 <div className="absolute bottom-[-10%] right-[10%] w-[50vw] h-[50vh] bg-amber-600/10 rounded-full blur-[150px] animate-blob animation-delay-4000"></div>
-                 <div className="absolute top-[40%] left-[-10%] w-[40vw] h-[40vh] bg-indigo-600/10 rounded-full blur-[150px] animate-blob animation-delay-2000"></div>
-            </div>
-
-             <nav className="fixed top-0 left-0 right-0 z-50 bg-[#020617]/70 backdrop-blur-xl border-b border-white/5 transition-all duration-300">
-                 <div className="container mx-auto px-6 py-5 flex justify-between items-center">
-                     <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.scrollTo(0,0)}>
-                         <div className="w-10 h-10 bg-brand-500/10 rounded-xl flex items-center justify-center border border-brand-500/20 shadow-glow group-hover:scale-110 transition-transform">
-                             <GraduationCap size={20} className="text-brand-500" />
-                         </div>
-                         <span className="text-xl font-black tracking-tight flex items-center gap-1 text-white">Enid<span className="text-brand-500">AI</span></span>
-                     </div>
-                     <div className="hidden md:flex gap-10 text-xs font-bold uppercase tracking-widest text-gray-400">
-                         <button onClick={() => scrollToSection('features')} className="hover:text-white hover:scale-105 transition-all duration-300">Teknoloji</button>
-                         <button onClick={() => scrollToSection('stats')} className="hover:text-white hover:scale-105 transition-all duration-300">Başarılar</button>
-                         <button onClick={() => scrollToSection('about')} className="hover:text-white hover:scale-105 transition-all duration-300">Kurumsal</button>
-                     </div>
-                     <div className="flex gap-4">
-                         <Button onClick={() => openAuth('LOGIN')} variant="ghost" className="text-gray-400 hover:text-white h-10 px-6 hidden sm:flex text-xs font-bold uppercase tracking-widest">Giriş</Button>
-                         <Button onClick={() => openAuth('REGISTER')} variant="luxury" className="h-10 px-6 text-xs font-bold uppercase tracking-widest">Başvur</Button>
-                     </div>
-                 </div>
-             </nav>
-
-             {/* HERO SECTION */}
-             <div className="relative z-10 container mx-auto px-6 pt-32 lg:pt-48 pb-20">
-                 <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
-                     <div className="flex-1 space-y-10 animate-slide-up text-center lg:text-left">
-                         <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-brand-300 text-[10px] font-black uppercase tracking-[0.2em] shadow-glow backdrop-blur-md hover:bg-white/10 transition-colors">
-                             <Sparkles size={12} className="text-amber-500" /> Geleceğin Eğitim Standartı
-                         </div>
-                         <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tighter text-white drop-shadow-2xl">
-                             Eğitimin <br/>
-                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-indigo-400 to-purple-400 animate-text-shimmer">Dijital Zirvesi.</span>
-                         </h1>
-                         <p className="text-xl text-gray-400 max-w-2xl leading-relaxed font-light mx-auto lg:mx-0">
-                             Yapay zeka, kurumunuzun DNA'sına işleniyor. Veri odaklı analiz, kişiselleştirilmiş koçluk ve kusursuz yönetim tek bir lüks panelde.
-                         </p>
-                         <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start pt-4">
-                             <Button onClick={() => openAuth('REGISTER')} variant="luxury" className="h-16 px-12 text-lg rounded-2xl w-full sm:w-auto shadow-glow-amber">Hemen Başla</Button>
-                             <Button onClick={() => scrollToSection('features')} variant="secondary" className="h-16 px-12 text-lg rounded-2xl w-full sm:w-auto">
-                                <PlayCircle className="mr-3 text-amber-500" size={20} /> Keşfet
-                             </Button>
-                         </div>
-                     </div>
-                     <div className="flex-1 w-full perspective-1000 hidden lg:block animate-spotlight">
-                         <div className="relative w-full aspect-[4/5] rotate-y-12 transition-transform duration-700 hover:rotate-y-0 transform-style-3d group cursor-pointer">
-                              {/* Glowing Backdrops */}
-                              <div className="absolute inset-0 bg-gradient-to-tr from-brand-500 to-amber-500 blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                              
-                              {/* Main Card */}
-                              <div className="absolute inset-0 rounded-[3rem] border border-white/10 bg-[#0f172a]/80 backdrop-blur-2xl shadow-2xl overflow-hidden z-10 ring-1 ring-white/5 transition-all">
-                                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/10 to-transparent opacity-50"></div>
-                                   <div className="p-8 h-full flex flex-col relative z-20">
-                                       <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
-                                           <div className="flex gap-2">
-                                               <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                               <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                                               <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                           </div>
-                                           <div className="text-xs font-mono text-gray-500 opacity-50">SYSTEM: ONLINE</div>
-                                       </div>
-                                       <div className="flex-1 relative">
-                                            {/* Floating Elements inside 3D card */}
-                                            <div className="absolute top-0 right-0 p-4 bg-black/60 rounded-2xl border border-white/10 text-green-400 text-xs font-bold animate-float shadow-lg backdrop-blur-md">
-                                                <TrendingUp size={16} className="mb-1"/> +%35 Başarı Artışı
-                                            </div>
-                                            
-                                            <div className="absolute bottom-12 left-0 right-0 p-6 bg-white/5 rounded-3xl border border-white/10 shadow-xl backdrop-blur-md">
-                                                <div className="flex gap-4 items-center mb-4">
-                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-brand-500 to-indigo-500 p-[2px] shadow-glow"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" className="rounded-full bg-black"/></div>
-                                                    <div className="w-full">
-                                                        <div className="h-2 w-24 bg-white/20 rounded-full mb-2"></div>
-                                                        <div className="h-2 w-16 bg-white/10 rounded-full"></div>
-                                                    </div>
-                                                </div>
-                                                <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                                    <div className="h-full w-[80%] bg-gradient-to-r from-amber-500 to-orange-600 shadow-[0_0_15px_rgba(245,158,11,0.5)]"></div>
-                                                </div>
-                                            </div>
-                                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 opacity-80 mix-blend-screen pointer-events-none">
-                                                <BrainCircuit size={200} className="text-brand-500 animate-pulse-slow" strokeWidth={0.5} />
-                                            </div>
-                                       </div>
-                                   </div>
-                              </div>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-             
-             {/* MARQUEE */}
-             <div className="relative z-20">
-                 <div className="container mx-auto py-2">
-                     <p className="text-center text-[10px] font-bold text-gray-600 uppercase tracking-[0.3em] mb-4">Referanslarımız ve Kazananlar</p>
-                 </div>
-                 <Marquee items={["ODTÜ Bilgisayar", "İTÜ Mimarlık", "Boğaziçi İşletme", "Koç Tıp", "Bilkent Hukuk", "Galatasaray Üniversitesi", "Stanford Kabul", "MIT Kabul"]} />
-             </div>
-             
-             {/* FEATURES SECTION (Bento Grid) */}
-             <div id="features" className="container mx-auto px-6 py-24 relative z-10">
-                 <div className="text-center mb-20">
-                     <h2 className="text-4xl lg:text-5xl font-black text-white mb-6">Sınırları Zorlayan <span className="text-gradient">Teknoloji.</span></h2>
-                     <p className="text-gray-400 max-w-2xl mx-auto">Eğitim süreçlerini optimize etmek için tasarlanmış, yapay zeka destekli modüller.</p>
-                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                     <div className="glass-panel p-8 rounded-[2.5rem] col-span-1 md:col-span-2 hover:bg-white/5 transition-colors group">
-                         <div className="w-14 h-14 bg-brand-500/10 rounded-2xl flex items-center justify-center mb-6 text-brand-500 group-hover:scale-110 transition-transform"><Bot size={32}/></div>
-                         <h3 className="text-2xl font-bold text-white mb-4">Gemini AI Destekli Koçluk</h3>
-                         <p className="text-gray-400">Öğrencilerin eksiklerini analiz eder, kişiye özel çalışma programı hazırlar ve 7/24 soruları yanıtlar. Sadece bir yazılım değil, sanal bir rehber öğretmen.</p>
-                     </div>
-                     <div className="glass-panel p-8 rounded-[2.5rem] hover:bg-white/5 transition-colors group">
-                         <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-6 text-amber-500 group-hover:scale-110 transition-transform"><PieChart size={32}/></div>
-                         <h3 className="text-2xl font-bold text-white mb-4">Veri Analitiği</h3>
-                         <p className="text-gray-400">Deneme sınavlarından ödevlere kadar her veriyi işleyerek başarı grafiklerini görselleştirir.</p>
-                     </div>
-                     <div className="glass-panel p-8 rounded-[2.5rem] hover:bg-white/5 transition-colors group">
-                         <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center mb-6 text-green-500 group-hover:scale-110 transition-transform"><Fingerprint size={32}/></div>
-                         <h3 className="text-2xl font-bold text-white mb-4">Dijital Yoklama</h3>
-                         <p className="text-gray-400">QR ve parmak izi simülasyonu ile anlık giriş-çıkış takibi. Velilere otomatik bildirim.</p>
-                     </div>
-                     <div className="glass-panel p-8 rounded-[2.5rem] col-span-1 md:col-span-2 hover:bg-white/5 transition-colors group">
-                         <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 text-purple-500 group-hover:scale-110 transition-transform"><Video size={32}/></div>
-                         <h3 className="text-2xl font-bold text-white mb-4">Hibrit İletişim</h3>
-                         <p className="text-gray-400">Entegre görüntülü ve sesli görüşme modülü ile öğretmen ve öğrenci arasındaki mesafeleri kaldırın.</p>
-                     </div>
-                 </div>
-             </div>
-
-             {/* STATS SECTION */}
-             <div id="stats" className="container mx-auto px-6 py-20 relative z-10">
-                 <div className="glass-panel p-12 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden">
-                     <div className="absolute inset-0 bg-gradient-to-r from-brand-900/20 to-amber-900/20 opacity-50"></div>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-12 relative z-10">
-                          {[
-                            { num: "12K+", label: "Analiz Edilen Soru", icon: FileCheck, color: "text-brand-400" },
-                            { num: "%98", label: "Yerleştirme Oranı", icon: Trophy, color: "text-amber-400" },
-                            { num: "45", label: "Partner Kurum", icon: Building2, color: "text-green-400" },
-                            { num: "24/7", label: "Aktif Sistem", icon: Activity, color: "text-purple-400" }
-                          ].map((stat, i) => (
-                            <div key={i} className="text-center group">
-                               <div className="mb-4 inline-flex p-3 rounded-2xl bg-white/5 group-hover:scale-110 transition-transform duration-300 border border-white/5"><stat.icon size={24} className={stat.color}/></div>
-                               <h3 className="text-5xl font-black text-white mb-2 tracking-tighter">{stat.num}</h3>
-                               <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{stat.label}</p>
-                            </div>
-                          ))}
-                     </div>
-                 </div>
-             </div>
-             
-             {/* FOOTER */}
-             <footer id="about" className="border-t border-white/10 bg-[#020617] pt-20 pb-10">
-                 <div className="container mx-auto px-6">
-                     <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-                         <div className="col-span-1 md:col-span-2">
-                             <div className="flex items-center gap-3 mb-6">
-                                 <div className="w-8 h-8 bg-brand-500/10 rounded-lg flex items-center justify-center border border-brand-500/20"><GraduationCap size={16} className="text-brand-500"/></div>
-                                 <span className="text-2xl font-black text-white tracking-tight">Enid<span className="text-brand-500">AI</span></span>
-                             </div>
-                             <p className="text-gray-400 max-w-sm leading-relaxed">
-                                 Eğitim kurumlarını dijital çağa taşıyan, yapay zeka tabanlı yönetim ve öğrenme platformu. Geleceği bugünden inşa edin.
-                             </p>
-                         </div>
-                         <div>
-                             <h4 className="font-bold text-white mb-6">Platform</h4>
-                             <ul className="space-y-4 text-sm text-gray-400">
-                                 <li><button onClick={() => scrollToSection('features')} className="hover:text-brand-500 transition-colors">Özellikler</button></li>
-                                 <li><button onClick={() => scrollToSection('stats')} className="hover:text-brand-500 transition-colors">Başarılar</button></li>
-                                 <li><button onClick={() => openAuth('LOGIN')} className="hover:text-brand-500 transition-colors">Giriş Yap</button></li>
-                             </ul>
-                         </div>
-                         <div>
-                             <h4 className="font-bold text-white mb-6">İletişim</h4>
-                             <ul className="space-y-4 text-sm text-gray-400">
-                                 <li className="flex items-center gap-2"><Mail size={16}/> info@enidai.com</li>
-                                 <li className="flex items-center gap-2"><Phone size={16}/> +90 (212) 555 0123</li>
-                                 <li className="flex items-center gap-2"><MapPin size={16}/> Maslak, İstanbul</li>
-                             </ul>
-                         </div>
-                     </div>
-                     <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                         <p className="text-xs text-gray-600">© 2024 Enid AI Inc. Tüm hakları saklıdır.</p>
-                         <div className="flex gap-4">
-                             <Linkedin size={18} className="text-gray-600 hover:text-white cursor-pointer transition-colors"/>
-                             <Twitter size={18} className="text-gray-600 hover:text-white cursor-pointer transition-colors"/>
-                             <Instagram size={18} className="text-gray-600 hover:text-white cursor-pointer transition-colors"/>
-                         </div>
-                     </div>
-                 </div>
-             </footer>
-
-             {/* ULTRA MODERN AUTH MODAL (Split Screen) */}
-             {isAuthModalOpen && (
-                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-in fade-in duration-500">
-                     <div className="relative w-full max-w-6xl h-[800px] bg-[#020617] rounded-[3rem] shadow-2xl flex overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500 ring-1 ring-white/5">
-                         <button onClick={() => setIsAuthModalOpen(false)} className="absolute top-8 right-8 z-50 p-3 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors border border-white/5 cursor-pointer hover:rotate-90 duration-300"><X size={20} /></button>
-                         
-                         {/* Left Side: Art & Motivation */}
-                         <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-16 overflow-hidden border-r border-white/5">
-                             {/* Dynamic Backgrounds */}
-                             <div className="absolute inset-0 bg-[#0f172a]"></div>
-                             <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-brand-600/20 rounded-full blur-[100px] animate-blob"></div>
-                             <div className="absolute bottom-[-20%] right-[-20%] w-[600px] h-[600px] bg-amber-600/10 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
-                             
-                             <div className="relative z-10">
-                                 <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 mb-8">
-                                     <Sparkles className="text-amber-400" size={24}/>
-                                 </div>
-                                 <h2 className="text-5xl font-black tracking-tighter text-white mb-6 leading-tight">
-                                     Potansiyelini <br/>
-                                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-indigo-400">Keşfetmeye</span> <br/>
-                                     Hazır mısın?
-                                 </h2>
-                                 <p className="text-gray-400 text-lg leading-relaxed max-w-md">Enid AI ile öğrenme sürecini kişiselleştir, hedeflerine en kısa yoldan ulaş.</p>
-                             </div>
-
-                             <div className="relative z-10 mt-auto">
-                                 <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-brand-500 backdrop-blur-xl bg-white/5">
-                                     <div className="flex gap-4 items-center mb-3">
-                                         <div className="flex -space-x-3">
-                                             {[1,2,3].map(i => <div key={i} className="w-10 h-10 rounded-full bg-gray-800 border-2 border-[#020617] flex items-center justify-center text-xs">🎓</div>)}
-                                         </div>
-                                         <p className="text-xs font-bold text-gray-300">500+ Yeni Katılımcı</p>
-                                     </div>
-                                     <p className="text-sm text-gray-400 italic">"Bu platform sayesinde YKS sıralamamı 20 bin kişi ileri çektim. Kesinlikle tavsiye ediyorum."</p>
-                                     <p className="text-xs font-bold text-brand-400 mt-2">— Zeynep K., Tıp Fakültesi Öğrencisi</p>
-                                 </div>
-                             </div>
-                         </div>
-
-                         {/* Right Side: Form */}
-                         <div className="flex-1 p-12 lg:p-20 flex flex-col justify-center relative bg-[#020617]/50 backdrop-blur-3xl">
-                             <div className="max-w-md mx-auto w-full">
-                                 <div className="mb-10 text-center">
-                                     <h2 className="text-3xl font-black text-white tracking-tight mb-2">
-                                        {loginRole === UserRole.INSTRUCTOR 
-                                            ? (authMode === 'LOGIN' ? 'Eğitmen Girişi' : 'Eğitmen Kaydı')
-                                            : (authMode === 'LOGIN' ? 'Öğrenci Girişi' : 'Aramıza Katıl')}
-                                     </h2>
-                                     <p className="text-gray-500 text-sm">
-                                        {loginRole === UserRole.INSTRUCTOR 
-                                            ? 'Kurumsal hesabınızla devam edin.' 
-                                            : 'Eğitim yolculuğun burada başlıyor.'}
-                                     </p>
-                                 </div>
-                                 
-                                 {error && (
-                                     <div className="mb-6 p-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-sm font-bold text-center animate-pulse flex flex-col gap-2 items-center">
-                                         <AlertCircle size={20}/>
-                                         <p>{error}</p>
-                                     </div>
-                                 )}
-
-                                 <div className="grid grid-cols-2 gap-2 bg-white/5 p-1.5 rounded-2xl mb-8 border border-white/10">
-                                      <button onClick={() => setLoginRole(UserRole.STUDENT)} className={`py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 ${loginRole === UserRole.STUDENT ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}><GraduationCap size={16}/> Öğrenci</button>
-                                      <button onClick={() => setLoginRole(UserRole.INSTRUCTOR)} className={`py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 ${loginRole === UserRole.INSTRUCTOR ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}><Briefcase size={16}/> Eğitmen</button>
-                                  </div>
-
-                                  {loginRole === UserRole.INSTRUCTOR && !isInstructorVerified ? (
-                                     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                                        <div className="text-center p-8 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                                            <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 border border-amber-500/20"><Lock size={32} /></div>
-                                            <p className="text-sm text-gray-400 mb-6">Güvenlik gereği özel erişim kodunuzu giriniz.</p>
-                                            <div className="space-y-2 relative group">
-                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-amber-500 transition-colors"><Key size={18} /></div>
-                                                <input type="password" value={instructorCode} onChange={e => setInstructorCode(e.target.value)} placeholder="Erişim Kodu" className="w-full pl-12 pr-5 py-4 rounded-2xl bg-[#0f172a] border border-white/10 text-white placeholder-gray-600 outline-none focus:border-amber-500/50 focus:shadow-glow-amber transition-all"/>
-                                            </div>
-                                        </div>
-                                        <Button onClick={handleVerifyInstructor} variant="luxury" className="w-full py-5 text-lg font-bold rounded-2xl shadow-glow-amber">Doğrula <Unlock size={18} className="ml-2"/></Button>
-                                     </div>
-                                  ) : (
-                                    <div className="animate-in slide-in-from-bottom-4 duration-500">
-                                        {authMode === 'LOGIN' ? (
-                                            <div className="space-y-5">
-                                                <div className="space-y-2 group">
-                                                    <label className="text-xs font-bold text-gray-500 uppercase ml-2 group-focus-within:text-brand-400 transition-colors">E-posta</label>
-                                                    <div className="relative">
-                                                        <Mail size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-brand-400 transition-colors"/>
-                                                        <input type="email" name="loginEmail" autoComplete="email" value={loginForm.email} onChange={e => setLoginForm({...loginForm, email: e.target.value})} className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-brand-500/50 focus:bg-white/10 transition-all focus:shadow-glow" placeholder="ornek@enid.com" />
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-2 group">
-                                                    <label className="text-xs font-bold text-gray-500 uppercase ml-2 group-focus-within:text-brand-400 transition-colors">Şifre</label>
-                                                    <div className="relative">
-                                                        <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-brand-400 transition-colors"/>
-                                                        <input type="password" name="loginPassword" autoComplete="current-password" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} className="w-full pl-12 pr-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-brand-500/50 focus:bg-white/10 transition-all focus:shadow-glow" placeholder="••••••" />
-                                                    </div>
-                                                </div>
-                                                <Button onClick={handleAuthSubmit} variant={loginRole === UserRole.INSTRUCTOR ? "luxury" : "primary"} className="w-full py-5 text-lg font-bold mt-4 rounded-2xl shadow-glow" disabled={loading} isLoading={loading}>Giriş Yap</Button>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                                <input type="text" name="registerName" placeholder="Ad Soyad" value={registerForm.name} onChange={e => setRegisterForm({...registerForm, name: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-brand-500/50 focus:bg-white/10 focus:shadow-glow transition-all" />
-                                                <input type="email" name="registerEmail" autoComplete="email" placeholder="E-posta" value={registerForm.email} onChange={e => setRegisterForm({...registerForm, email: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-brand-500/50 focus:bg-white/10 focus:shadow-glow transition-all" />
-                                                <input type="text" name="registerTc" placeholder="TC Kimlik No" value={registerForm.tcNo} onChange={e => setRegisterForm({...registerForm, tcNo: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-brand-500/50 focus:bg-white/10 focus:shadow-glow transition-all" />
-                                                {loginRole === UserRole.STUDENT && (
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <select value={registerForm.className} onChange={e => setRegisterForm({...registerForm, className: e.target.value})} className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-[#020617] focus:border-brand-500/50 outline-none appearance-none cursor-pointer hover:bg-white/10">
-                                                            <option value="">Sınıf Seçiniz</option>
-                                                            {CLASS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                        </select>
-                                                        <select value={registerForm.field} onChange={e => setRegisterForm({...registerForm, field: e.target.value})} className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 bg-[#020617] focus:border-brand-500/50 outline-none appearance-none cursor-pointer hover:bg-white/10">
-                                                            <option value="">Alan Seçiniz</option>
-                                                            {FIELD_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                        </select>
-                                                    </div>
-                                                )}
-                                                <input type="password" name="registerPassword" autoComplete="new-password" placeholder="Şifre Belirle" value={registerForm.password} onChange={e => setRegisterForm({...registerForm, password: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white outline-none focus:border-brand-500/50 focus:bg-white/10 focus:shadow-glow transition-all" />
-                                                <Button onClick={handleAuthSubmit} variant={loginRole === UserRole.INSTRUCTOR ? "luxury" : "primary"} className="w-full py-5 text-lg font-bold rounded-2xl shadow-glow" disabled={loading} isLoading={loading}>Kayıt Ol</Button>
-                                            </div>
-                                        )}
-                                        <div className="mt-8 text-center">
-                                            <button onClick={() => setAuthMode(authMode === 'LOGIN' ? 'REGISTER' : 'LOGIN')} className="text-sm font-bold text-gray-500 hover:text-white uppercase tracking-widest transition-colors">{authMode === 'LOGIN' ? 'Hesabın yok mu? Kayıt Ol' : 'Zaten hesabın var mı? Giriş Yap'}</button>
-                                        </div>
-                                    </div>
-                                  )}
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-             )}
-        </div>
-    );
-}
-
-const CallOverlay: React.FC<{ session: CallSession, onEnd: () => void }> = ({ session, onEnd }) => {
-    const [muted, setMuted] = useState(false);
-    const [cameraOff, setCameraOff] = useState(false);
-    const [timer, setTimer] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => setTimer(t => t + 1), 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    return (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#0f172a]/95 backdrop-blur-3xl animate-in zoom-in-95 duration-500">
-             <div className="relative z-10 flex flex-col items-center">
-                 <div className="relative mb-12">
-                     <div className="w-40 h-40 rounded-full p-1 bg-gradient-to-tr from-brand-500 to-indigo-500 shadow-glow-lg animate-pulse-slow">
-                        <img src={session.participantAvatar} className="w-full h-full rounded-full object-cover border-4 border-[#0f172a]" alt=""/>
-                     </div>
-                     <div className="absolute -bottom-2 -right-2 p-3 bg-green-500 rounded-full border-4 border-[#0f172a] shadow-lg animate-bounce">
-                        {session.type === 'video' ? <Video size={20} className="text-white"/> : <Phone size={20} className="text-white"/>}
-                     </div>
-                 </div>
-                 <h2 className="text-4xl font-black text-white mb-2">{session.participantName}</h2>
-                 <p className="text-brand-400 font-bold uppercase tracking-widest text-sm mb-12">{formatTime(timer)} • {session.type === 'video' ? 'Görüntülü Arıyor' : 'Sesli Arıyor'}</p>
-                 <div className="flex items-center gap-6">
-                     <button onClick={() => setMuted(!muted)} className={`p-6 rounded-full transition-all duration-300 ${muted ? 'bg-white text-gray-900' : 'bg-white/10 text-white hover:bg-white/20'}`}>
-                         {muted ? <MicOff size={32}/> : <Mic size={32}/>}
-                     </button>
-                     <button onClick={onEnd} className="p-8 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg shadow-red-500/40 transform hover:scale-105 transition-all">
-                         <PhoneOff size={40} fill="currentColor"/>
-                     </button>
-                     {session.type === 'video' && (
-                        <button onClick={() => setCameraOff(!cameraOff)} className={`p-6 rounded-full transition-all duration-300 ${cameraOff ? 'bg-white text-gray-900' : 'bg-white/10 text-white hover:bg-white/20'}`}>
-                            {cameraOff ? <VideoOff size={32}/> : <Video size={32}/>}
-                        </button>
-                     )}
-                 </div>
-             </div>
-        </div>
-    );
-};
-
-
-const App: React.FC = () => {
+export default function App() {
+  // Auth & User State
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [loginRole, setLoginRole] = useState<UserRole>(UserRole.STUDENT);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [instructorCode, setInstructorCode] = useState('');
+  const [isInstructorVerified, setIsInstructorVerified] = useState(false);
+
+  // App Data State
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [collapsed, setCollapsed] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-
-  // --- DATA STATES ---
-  const [students, setStudents] = useState<User[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [darkMode, setDarkMode] = useState(true); // Default dark
+  
+  // Dynamic Data (from Firebase)
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [classes, setClasses] = useState<string[]>([]);
-  const [fields, setFields] = useState<string[]>([]);
-  const [studySessions, setStudySessions] = useState<StudySession[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [students, setStudents] = useState<User[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [classesList, setClassesList] = useState<string[]>([]);
+  const [fieldsList, setFieldsList] = useState<string[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  
-  // UI States
-  const [isModalOpen, setIsModalOpen] = useState<{type: string, isOpen: boolean}>({type: '', isOpen: false});
-  const [formData, setFormData] = useState<any>({});
-  
-  // Filtering
-  const [selectedClassFilter, setSelectedClassFilter] = useState<string | null>(null);
-  const [selectedFieldFilter, setSelectedFieldFilter] = useState<string | null>(null);
+  const [studySessions, setStudySessions] = useState<StudySession[]>([]);
 
-  // Modules State
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [todayAttendanceState, setTodayAttendanceState] = useState<'NONE' | 'CHECKED_IN' | 'CHECKED_OUT'>('NONE');
-
-  // Chat State
-  const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'model', text: string}>>([]);
-  const [chatInput, setChatInput] = useState('');
-  const [isChatLoading, setIsChatLoading] = useState(false);
-
-  // Messaging State (Human)
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [messageInput, setMessageInput] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [activeCall, setActiveCall] = useState<CallSession | null>(null);
+  // UI State for Modals/Filters
+  const [isAddAssignmentModalOpen, setIsAddAssignmentModalOpen] = useState(false);
+  const [isAddAnnouncementModalOpen, setIsAddAnnouncementModalOpen] = useState(false);
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
+  const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterClass, setFilterClass] = useState('');
+  const [filterField, setFilterField] = useState('');
+  const [selectedUserForChat, setSelectedUserForChat] = useState<User | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // Exam Taking State
-  const [activeExamSession, setActiveExamSession] = useState<{exam: Exam, currentQuestion: number, answers: Record<string, string>, timeLeft: number} | null>(null);
+  const [activeExam, setActiveExam] = useState<Exam | null>(null);
+  const [examAnswers, setExamAnswers] = useState<Record<string, string>>({});
   const [examResult, setExamResult] = useState<ExamResult | null>(null);
+  const [examTimer, setExamTimer] = useState(0);
 
-  // AI Assignment State
-  const [assignmentTopic, setAssignmentTopic] = useState('');
-  const [generatedAssignment, setGeneratedAssignment] = useState<{title: string, description: string} | null>(null);
-  const [isGeneratingAssignment, setIsGeneratingAssignment] = useState(false);
+  // Chat State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatHistory, setChatHistory] = useState<Array<{role: 'user' | 'model', parts: {text: string}[]}>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
-  // --- FIREBASE SUBSCRIPTIONS ---
+  // Auth Form State
+  const [formData, setFormData] = useState({
+    email: '', password: '', name: '', pin: '', 
+    tcNo: '', className: '', field: ''
+  });
+  const [authError, setAuthError] = useState('');
+
+  // --- Effects ---
+
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
-        if (currentUser) {
-            const userDoc = await db.collection("users").doc(currentUser.uid).get();
-            if (userDoc.exists) {
-                setUser({ id: userDoc.id, ...userDoc.data() } as User);
-            }
-        } else {
-            setUser(null);
+    // Dark mode init
+    document.documentElement.classList.add('dark');
+    
+    // Auth Listener
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        // Fetch user details from Firestore
+        const docRef = db.collection('users').doc(firebaseUser.uid);
+        const doc = await docRef.get();
+        if (doc.exists) {
+          setUser({ id: doc.id, ...doc.data() } as User);
         }
-        setIsAuthLoading(false);
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-      if (!user) return;
-      const unsubStudents = db.collection("users").where("role", "==", UserRole.STUDENT).onSnapshot((snapshot) => setStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User))));
-      const unsubAssignments = db.collection("assignments").orderBy("createdAt", "desc").onSnapshot((snapshot) => setAssignments(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Assignment))));
-      const unsubExams = db.collection("exams").orderBy("createdAt", "desc").onSnapshot((snapshot) => setExams(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Exam))));
-      const unsubAnnouncements = db.collection("announcements").orderBy("date", "desc").onSnapshot((snapshot) => setAnnouncements(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Announcement))));
-      const unsubClasses = db.collection("classes").onSnapshot((snapshot) => setClasses(snapshot.docs.map(d => d.data().name)));
-      const unsubFields = db.collection("fields").onSnapshot((snapshot) => setFields(snapshot.docs.map(d => d.data().name)));
-      const unsubStudy = db.collection("studySessions").onSnapshot((snapshot) => setStudySessions(snapshot.docs.map(d => ({id: d.id, ...d.data()} as StudySession))));
-      const unsubProjects = db.collection("projects").onSnapshot((snapshot) => setProjects(snapshot.docs.map(d => ({id: d.id, ...d.data()} as Project))));
-      
-      // Mock Data for conversations if empty
-      if (conversations.length === 0) {
-          setConversations([
-             {
-                 id: '1', participantId: 'mock1', participantName: 'Dr. Zeynep Hoca', participantAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zeynep', participantRole: UserRole.INSTRUCTOR,
-                 lastMessage: 'Ödevini kontrol ettim.', unreadCount: 1, status: 'active',
-                 messages: [{ id: 'm1', senderId: 'mock1', text: 'Merhaba, ödevini kontrol ettim. Gayet başarılı.', messageType: 'text', timestamp: new Date().toISOString() }]
-             }
-          ]);
-      }
+    if (!user) return;
 
-      return () => { unsubStudents(); unsubAssignments(); unsubExams(); unsubAnnouncements(); unsubClasses(); unsubFields(); unsubStudy(); unsubProjects(); };
+    // Real-time Listeners
+    const unsubAnnouncements = db.collection('announcements')
+      .orderBy('date', 'desc')
+      .onSnapshot(snapshot => {
+        setAnnouncements(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
+      });
+
+    const unsubAssignments = db.collection('assignments')
+      .orderBy('dueDate', 'asc')
+      .onSnapshot(snapshot => {
+        setAssignments(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Assignment)));
+      });
+
+    const unsubExams = db.collection('exams')
+      .onSnapshot(snapshot => {
+        setExams(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Exam)));
+      });
+      
+    // Fetch students/classes/fields if Instructor
+    let unsubStudents = () => {};
+    if (user.role === UserRole.INSTRUCTOR) {
+        unsubStudents = db.collection('users')
+        .where('role', '==', 'STUDENT')
+        .onSnapshot(snapshot => {
+            const studs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
+            setStudents(studs);
+            
+            // Extract unique classes and fields
+            const classes = Array.from(new Set(studs.map(s => s.className).filter(Boolean))) as string[];
+            const fields = Array.from(new Set(studs.map(s => s.field).filter(Boolean))) as string[];
+            setClassesList(classes.sort());
+            setFieldsList(fields.sort());
+        });
+    }
+
+    // Projects & Study & Attendance Listener (Mocked connection to generic collections for demo)
+    const unsubProjects = db.collection('projects').onSnapshot(snap => setProjects(snap.docs.map(d => ({id: d.id, ...d.data()} as Project))));
+    const unsubStudy = db.collection('study').onSnapshot(snap => setStudySessions(snap.docs.map(d => ({id: d.id, ...d.data()} as StudySession))));
+    const unsubAttendance = db.collection('attendance').orderBy('date', 'desc').limit(50).onSnapshot(snap => setAttendanceRecords(snap.docs.map(d => ({id: d.id, ...d.data()} as AttendanceRecord))));
+
+    return () => {
+      unsubAnnouncements();
+      unsubAssignments();
+      unsubExams();
+      unsubStudents();
+      unsubProjects();
+      unsubStudy();
+      unsubAttendance();
+    };
   }, [user]);
 
+  // Exam Timer
   useEffect(() => {
-    if (activeExamSession && activeExamSession.timeLeft > 0) {
-      const timer = setInterval(() => {
-        setActiveExamSession(prev => prev ? {...prev, timeLeft: prev.timeLeft - 1} : null);
-      }, 1000);
-      return () => clearInterval(timer);
-    } else if (activeExamSession && activeExamSession.timeLeft === 0) {
-      submitExam();
+    if (activeExam && !examResult) {
+      const interval = setInterval(() => setExamTimer(t => t + 1), 1000);
+      return () => clearInterval(interval);
     }
-  }, [activeExamSession?.timeLeft]);
+  }, [activeExam, examResult]);
 
-  const handleLogout = async () => { await auth.signOut(); setUser(null); setActiveTab('dashboard'); };
-  
-  const handleAddAssignment = async () => {
-      const newAssign: Omit<Assignment, 'id'> = {
-          title: generatedAssignment?.title || formData.title,
-          description: generatedAssignment?.description || formData.description,
-          subject: formData.subject || 'Genel',
-          dueDate: formData.dueDate,
-          createdBy: user!.id,
-          createdAt: new Date().toISOString()
-      };
-      await db.collection("assignments").add(newAssign);
-      setGeneratedAssignment(null);
-      setIsModalOpen({type: '', isOpen: false});
-      setFormData({});
+
+  // --- Logic Helpers ---
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    setUser(null);
+    setShowAuthModal(false);
+    setIsInstructorVerified(false);
+    setInstructorCode('');
+    setActiveTab('dashboard');
   };
 
-  const handleAddExam = async () => {
-     const mockQuestions: Question[] = Array(5).fill(null).map((_, i) => ({
-         id: i.toString(),
-         text: `Soru ${i+1}: Bu bir deneme sorusudur. Doğru cevap A şıkkıdır.`,
-         type: 'MULTIPLE_CHOICE',
-         options: ['Cevap A', 'Cevap B', 'Cevap C', 'Cevap D'],
-         correctAnswer: 'Cevap A',
-         points: 20
-     }));
-     const newExam: Omit<Exam, 'id'> = {
-         title: formData.title,
-         description: formData.description,
-         subject: formData.subject,
-         durationMinutes: parseInt(formData.duration),
-         questions: mockQuestions,
-         createdBy: user!.id,
-         createdAt: new Date().toISOString()
-     };
-     await db.collection("exams").add(newExam);
-     setIsModalOpen({type: '', isOpen: false});
-     setFormData({});
-  };
-  
-  const handleAddStudy = async () => {
-      await db.collection("studySessions").add({ subject: formData.subject, teacherName: formData.teacherName, date: formData.date, time: formData.time, location: 'Etüt Odası 3', status: 'UPCOMING' });
-      setIsModalOpen({type: '', isOpen: false});
-      setFormData({});
-  };
-  
-  const handleAddProject = async () => {
-      await db.collection("projects").add({ 
-          title: formData.title, 
-          description: formData.description, 
-          deadline: formData.deadline, 
-          progress: 0, 
-          status: 'PLANNING',
-          teamMembers: [user!.id] 
-      });
-      setIsModalOpen({type: '', isOpen: false});
-      setFormData({});
-  };
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setLoading(true);
 
-  const handleAddAnnouncement = async () => {
-      await db.collection("announcements").add({ title: formData.title, content: formData.content, date: new Date().toISOString(), authorName: user!.name, priority: 'NORMAL' });
-      setIsModalOpen({type:'', isOpen:false});
-      setFormData({});
-  };
-  const handleAddClass = async () => { await db.collection("classes").add({ name: formData.name }); setIsModalOpen({type:'', isOpen:false}); setFormData({}); };
-  const handleAddField = async () => { await db.collection("fields").add({ name: formData.name }); setIsModalOpen({type:'', isOpen:false}); setFormData({}); };
-
-  const handleDeleteStudent = async (studentId: string) => {
-      if (window.confirm("Bu öğrenciyi silmek istediğinize emin misiniz?")) {
-          try {
-              await db.collection("users").doc(studentId).delete();
-          } catch (error) {
-              console.error("Öğrenci silinirken hata oluştu:", error);
-          }
-      }
-  };
-
-  const handleStartExam = (exam: Exam) => { setActiveExamSession({ exam, currentQuestion: 0, answers: {}, timeLeft: exam.durationMinutes * 60 }); };
-  const handleAnswerExam = (option: string) => { if (!activeExamSession) return; setActiveExamSession({ ...activeExamSession, answers: { ...activeExamSession.answers, [activeExamSession.exam.questions[activeExamSession.currentQuestion].id]: option } }); };
-  const submitExam = () => {
-      if (!activeExamSession) return;
-      let score = 0; let correct = 0; let wrong = 0;
-      activeExamSession.exam.questions.forEach(q => { if (activeExamSession.answers[q.id] === q.correctAnswer) { score += q.points; correct++; } else { wrong++; } });
-      setExamResult({ id: Date.now().toString(), examId: activeExamSession.exam.id, studentId: user!.id, score, correctCount: correct, wrongCount: wrong, submittedAt: new Date().toISOString() });
-      setActiveExamSession(null);
-  };
-
-  const handleGenerateAssignment = async () => {
-    if (!assignmentTopic) return;
-    setIsGeneratingAssignment(true);
-    try { const result = await generateAssignmentIdea(assignmentTopic); setGeneratedAssignment(result); } catch (error) { console.error(error); } finally { setIsGeneratingAssignment(false); }
-  };
-
-  const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!chatInput.trim()) return;
-    const newMessages = [...chatMessages, { role: 'user' as const, text: chatInput }];
-    setChatMessages(newMessages); setChatInput(''); setIsChatLoading(true);
     try {
-      const history = newMessages.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
-      const response = await chatWithStudentAssistant(chatInput, history);
-      setChatMessages([...newMessages, { role: 'model', text: response }]);
-    } catch (error) { console.error(error); } finally { setIsChatLoading(false); }
+      const { email, password, name, tcNo, pin, className, field } = formData;
+      
+      // Basic Validation
+      if (!email.includes('@')) throw new Error('Geçersiz e-posta adresi.');
+      if (password.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
+
+      if (authMode === 'register') {
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        const newUser: User = {
+          id: cred.user!.uid,
+          name,
+          role: loginRole,
+          pin,
+          email,
+          ...(loginRole === UserRole.STUDENT ? { tcNo, className, field } : {})
+        };
+        await db.collection('users').doc(newUser.id).set(newUser);
+      } else {
+        await auth.signInWithEmailAndPassword(email, password);
+      }
+      setShowAuthModal(false);
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        setAuthError('Bu e-posta adresi zaten kullanımda.');
+      } else if (error.code === 'auth/invalid-email') {
+        setAuthError('E-posta formatı hatalı.');
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        setAuthError('E-posta veya şifre hatalı.');
+      } else {
+        setAuthError(error.message || 'Bir hata oluştu.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSendMessage = (type: MessageType = 'text', content?: string) => {
-      if (!activeConversationId) return;
-      const newMsg: Message = { id: Date.now().toString(), senderId: user!.id, messageType: type, text: type === 'text' ? messageInput : undefined, fileUrl: type !== 'text' ? content : undefined, fileName: type === 'file' ? 'odev.pdf' : undefined, duration: type === 'audio' ? '0:12' : undefined, timestamp: new Date().toISOString() };
-      setConversations(prev => prev.map(c => { if (c.id === activeConversationId) return { ...c, messages: [...c.messages, newMsg], lastMessage: type === 'text' ? messageInput : 'Yeni Medya' }; return c; }));
-      setMessageInput('');
-  };
-  const handleFileUpload = () => setTimeout(() => handleSendMessage('file', '#'), 500);
-  const handleVoiceRecord = () => { setIsRecording(!isRecording); if (isRecording) handleSendMessage('audio', '#'); };
-  const handleStartCall = (type: 'voice' | 'video', participantName: string, participantAvatar: string) => setActiveCall({ isActive: true, participantName, participantAvatar, type, status: 'calling', duration: 0 });
-
-  const handleCheckIn = () => { setAttendanceLoading(true); setTimeout(() => { setTodayAttendanceState('CHECKED_IN'); setAttendanceLoading(false); }, 1500); };
-  const handleCheckOut = () => { setAttendanceLoading(true); setTimeout(() => { setTodayAttendanceState('CHECKED_OUT'); setAttendanceLoading(false); }, 1500); };
-
-  if (isAuthLoading) return <div className="min-h-screen flex items-center justify-center bg-[#020617] text-white"><div className="flex flex-col items-center"><div className="w-20 h-20 rounded-full border-4 border-brand-500/20 border-t-brand-500 animate-spin mb-6"></div><div className="text-xl font-black tracking-widest uppercase animate-pulse">Enid AI Yükleniyor</div></div></div>;
-  if (!user) return <LandingPage onLoginSuccess={setUser} />;
-
-  if (activeCall) return <CallOverlay session={activeCall} onEnd={() => setActiveCall(null)} />;
-
-  const renderContent = () => {
-      if (activeExamSession) {
-          // EXAM INTERFACE (Kept Clean)
-          const q = activeExamSession.exam.questions[activeExamSession.currentQuestion];
-          return (
-              <div className="flex flex-col h-full max-w-4xl mx-auto py-10">
-                  <div className="flex justify-between items-center mb-8">
-                      <h2 className="text-3xl font-bold text-white">{activeExamSession.exam.title}</h2>
-                      <div className="px-6 py-2 bg-slate-800 rounded-xl font-mono text-xl text-brand-400">
-                          {Math.floor(activeExamSession.timeLeft / 60)}:{(activeExamSession.timeLeft % 60).toString().padStart(2, '0')}
-                      </div>
-                  </div>
-                  <div className="bg-slate-800 rounded-3xl p-10 border border-slate-700 shadow-xl">
-                      <div className="mb-6 text-brand-500 font-bold uppercase tracking-widest text-sm">Soru {activeExamSession.currentQuestion + 1} / {activeExamSession.exam.questions.length}</div>
-                      <h3 className="text-2xl font-medium mb-8 leading-relaxed text-white">{q.text}</h3>
-                      <div className="space-y-3">
-                          {q.options?.map((opt, i) => (
-                              <button key={i} onClick={() => handleAnswerExam(opt)} 
-                                className={`w-full p-5 text-left rounded-xl border transition-all duration-200 ${activeExamSession.answers[q.id] === opt ? 'border-brand-500 bg-brand-900/20 text-white' : 'border-slate-700 bg-slate-800/50 hover:bg-slate-700 text-slate-300'}`}>
-                                  {opt}
-                              </button>
-                          ))}
-                      </div>
-                      <div className="mt-10 flex justify-end">
-                          {activeExamSession.currentQuestion < activeExamSession.exam.questions.length - 1 ? (
-                              <Button onClick={() => setActiveExamSession({...activeExamSession, currentQuestion: activeExamSession.currentQuestion + 1})} variant="primary">Sonraki <ChevronRight className="ml-2" size={16} /></Button>
-                          ) : (
-                              <Button onClick={submitExam} variant="luxury">Sınavı Bitir <CheckCircle className="ml-2" size={16} /></Button>
-                          )}
-                      </div>
-                  </div>
-              </div>
-          );
-      }
-
-      if (examResult) {
-          // RESULT INTERFACE (Kept Clean)
-          return (
-              <div className="flex items-center justify-center h-full">
-                  <div className="bg-slate-800 p-12 rounded-3xl text-center max-w-xl w-full border border-slate-700 shadow-2xl">
-                      <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-green-500"><Trophy size={48}/></div>
-                      <h2 className="text-3xl font-bold mb-4 text-white">Sınav Tamamlandı</h2>
-                      <div className="grid grid-cols-3 gap-4 mb-8">
-                          <div className="p-4 bg-slate-900 rounded-2xl">
-                              <div className="text-3xl font-bold text-white">{examResult.score}</div>
-                              <div className="text-xs text-slate-500 uppercase font-bold mt-1">Puan</div>
-                          </div>
-                          <div className="p-4 bg-green-900/20 rounded-2xl border border-green-900/30">
-                              <div className="text-3xl font-bold text-green-500">{examResult.correctCount}</div>
-                              <div className="text-xs text-green-600 uppercase font-bold mt-1">Doğru</div>
-                          </div>
-                          <div className="p-4 bg-red-900/20 rounded-2xl border border-red-900/30">
-                              <div className="text-3xl font-bold text-red-500">{examResult.wrongCount}</div>
-                              <div className="text-xs text-red-600 uppercase font-bold mt-1">Yanlış</div>
-                          </div>
-                      </div>
-                      <Button onClick={() => setExamResult(null)} variant="secondary" className="w-full">Panele Dön</Button>
-                  </div>
-              </div>
-          );
-      }
-
-      // Standard Dashboard Logic
-      switch(activeTab) {
-          case 'assignments':
-              return (
-                  <div className="max-w-5xl mx-auto py-6 animate-in fade-in">
-                      <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-2xl font-bold text-white">Ödevler</h2>
-                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'ASSIGNMENT', isOpen: true})} variant="primary"><Plus size={18} className="mr-2"/> Yeni Ödev</Button>}
-                      </div>
-                      <div className="space-y-4">
-                          {assignments.map(assign => (
-                              <div key={assign.id} className="bg-slate-800 p-6 rounded-lg border border-slate-700 hover:border-slate-600 transition-all flex justify-between items-center group">
-                                  <div>
-                                      <div className="flex items-center gap-3 mb-2">
-                                          <span className="px-2 py-1 rounded bg-brand-900/30 text-brand-400 text-xs font-bold uppercase border border-brand-900/50">{assign.subject}</span>
-                                          <span className="text-xs text-slate-500 flex items-center gap-1"><Clock size={12}/> {new Date(assign.dueDate).toLocaleDateString()}</span>
-                                      </div>
-                                      <h3 className="text-lg font-bold text-white">{assign.title}</h3>
-                                      <p className="text-slate-400 text-sm mt-1">{assign.description}</p>
-                                  </div>
-                                  <div className="flex gap-2">
-                                      {user.role === UserRole.STUDENT ? (
-                                          <Button variant="outline" className="px-4 py-2 text-xs">Yükle</Button>
-                                      ) : (
-                                          <button onClick={() => {}} className="p-2 text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={18}/></button>
-                                      )}
-                                  </div>
-                              </div>
-                          ))}
-                          {assignments.length === 0 && <EmptyState icon={BookOpen} title="Ödev Bulunamadı" description="Henüz atanmış bir ödev yok." />}
-                      </div>
-                  </div>
-              );
-          case 'exams':
-              return (
-                  <div className="max-w-5xl mx-auto py-6 animate-in fade-in">
-                      <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-2xl font-bold text-white">Sınavlar</h2>
-                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'EXAM', isOpen: true})} variant="primary"><Plus size={18} className="mr-2"/> Yeni Sınav</Button>}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {exams.map(exam => (
-                              <div key={exam.id} className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-                                  <div className="flex justify-between items-start mb-4">
-                                      <div>
-                                          <h3 className="text-xl font-bold text-white">{exam.title}</h3>
-                                          <p className="text-sm text-slate-400">{exam.subject} • {exam.durationMinutes} Dakika</p>
-                                      </div>
-                                      <div className="bg-brand-500/10 p-2 rounded-lg text-brand-500"><Award size={24}/></div>
-                                  </div>
-                                  <p className="text-sm text-slate-500 mb-6">{exam.description}</p>
-                                  {user.role === UserRole.STUDENT ? (
-                                      <Button onClick={() => handleStartExam(exam)} variant="primary" className="w-full">Sınava Başla</Button>
-                                  ) : (
-                                      <div className="flex gap-2">
-                                          <Button variant="outline" className="flex-1 text-xs">Düzenle</Button>
-                                          <Button variant="danger" className="flex-1 text-xs">Sil</Button>
-                                      </div>
-                                  )}
-                              </div>
-                          ))}
-                      </div>
-                      {exams.length === 0 && <EmptyState icon={Award} title="Sınav Yok" description="Aktif bir sınav bulunmuyor." />}
-                  </div>
-              );
-          case 'students':
-              if (user.role !== UserRole.INSTRUCTOR) return null;
-              const filteredStudents = students.filter(s => 
-                  (!selectedClassFilter || s.className === selectedClassFilter) &&
-                  (!selectedFieldFilter || s.field === selectedFieldFilter)
-              );
-              return (
-                  <div className="max-w-6xl mx-auto py-6 animate-in fade-in">
-                      <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-2xl font-bold text-white">Öğrenciler</h2>
-                          <div className="flex gap-2">
-                               <select className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm" onChange={e => setSelectedClassFilter(e.target.value || null)}>
-                                   <option value="">Tüm Sınıflar</option>
-                                   {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                               </select>
-                               <select className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm" onChange={e => setSelectedFieldFilter(e.target.value || null)}>
-                                   <option value="">Tüm Alanlar</option>
-                                   {FIELD_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                               </select>
-                          </div>
-                      </div>
-                      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-                          <table className="w-full text-left">
-                              <thead className="bg-slate-900/50 text-slate-400 text-xs uppercase font-bold">
-                                  <tr>
-                                      <th className="p-4">Öğrenci</th>
-                                      <th className="p-4">TC / PIN</th>
-                                      <th className="p-4">Sınıf</th>
-                                      <th className="p-4">Alan</th>
-                                      <th className="p-4 text-right">İşlem</th>
-                                  </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-700">
-                                  {filteredStudents.map(student => (
-                                      <tr key={student.id} className="hover:bg-slate-700/50 transition-colors">
-                                          <td className="p-4 flex items-center gap-3">
-                                              <img src={student.avatarUrl} className="w-10 h-10 rounded-full bg-slate-700" alt=""/>
-                                              <div>
-                                                  <div className="font-bold text-white">{student.name}</div>
-                                                  <div className="text-xs text-slate-500">{student.email}</div>
-                                              </div>
-                                          </td>
-                                          <td className="p-4 text-slate-300">{student.tcNo || '-'}</td>
-                                          <td className="p-4"><span className="px-2 py-1 bg-blue-500/10 text-blue-400 rounded text-xs font-bold">{student.className || '-'}</span></td>
-                                          <td className="p-4 text-slate-400 text-sm">{student.field || '-'}</td>
-                                          <td className="p-4 text-right">
-                                              <button onClick={() => handleDeleteStudent(student.id)} className="text-slate-500 hover:text-red-500 transition-colors p-2"><Trash2 size={18}/></button>
-                                          </td>
-                                      </tr>
-                                  ))}
-                              </tbody>
-                          </table>
-                          {filteredStudents.length === 0 && <div className="p-8 text-center text-slate-500">Öğrenci bulunamadı.</div>}
-                      </div>
-                  </div>
-              );
-          case 'classes':
-              return (
-                  <div className="max-w-5xl mx-auto py-6 animate-in fade-in">
-                       <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-2xl font-bold text-white">Sınıflar</h2>
-                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'CLASS', isOpen: true})} variant="primary"><Plus size={18} className="mr-2"/> Yeni Sınıf</Button>}
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {classes.map((cls, i) => (
-                              <div key={i} className="bg-slate-800 p-6 rounded-lg border border-slate-700 hover:border-brand-500 cursor-pointer transition-all text-center group" onClick={() => { setSelectedClassFilter(cls); setActiveTab('students'); }}>
-                                  <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-3 text-white group-hover:bg-brand-500 group-hover:text-white transition-colors"><Users size={20}/></div>
-                                  <h3 className="text-xl font-bold text-white">{cls}</h3>
-                                  <p className="text-sm text-slate-500">Öğrencileri Gör</p>
-                              </div>
-                          ))}
-                      </div>
-                  </div>
-              );
-          case 'fields':
-              return (
-                  <div className="max-w-5xl mx-auto py-6 animate-in fade-in">
-                       <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-2xl font-bold text-white">Alanlar</h2>
-                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'FIELD', isOpen: true})} variant="primary"><Plus size={18} className="mr-2"/> Yeni Alan</Button>}
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {fields.map((f, i) => (
-                              <div key={i} className="bg-slate-800 p-6 rounded-lg border border-slate-700 hover:border-amber-500 cursor-pointer transition-all text-center group" onClick={() => { setSelectedFieldFilter(f); setActiveTab('students'); }}>
-                                  <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-3 text-white group-hover:bg-amber-500 group-hover:text-white transition-colors"><Briefcase size={20}/></div>
-                                  <h3 className="text-xl font-bold text-white">{f}</h3>
-                                  <p className="text-sm text-slate-500">Öğrencileri Gör</p>
-                              </div>
-                          ))}
-                      </div>
-                  </div>
-              );
-          case 'attendance':
-              return (
-                  <div className="max-w-4xl mx-auto py-6 animate-in fade-in">
-                      <h2 className="text-2xl font-bold text-white mb-6">Giriş / Çıkış Takibi</h2>
-                      {user.role === UserRole.STUDENT ? (
-                          <div className="bg-slate-800 p-8 rounded-xl border border-slate-700 text-center">
-                              <div className="w-24 h-24 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-                                  {attendanceLoading && <div className="absolute inset-0 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>}
-                                  <Fingerprint size={48} className={todayAttendanceState === 'CHECKED_IN' ? 'text-green-500' : 'text-slate-400'}/>
-                              </div>
-                              <h3 className="text-xl font-bold text-white mb-2">Dijital Yoklama</h3>
-                              <p className="text-slate-400 mb-8">Okula giriş ve çıkışlarınızı buradan yapabilirsiniz.</p>
-                              <div className="flex justify-center gap-4">
-                                  <Button onClick={handleCheckIn} disabled={todayAttendanceState !== 'NONE' || attendanceLoading} className={`px-8 py-4 text-lg ${todayAttendanceState === 'CHECKED_IN' ? 'bg-green-600' : 'bg-brand-600'}`}>
-                                      {todayAttendanceState === 'CHECKED_IN' ? 'Giriş Yapıldı' : 'Giriş Yap'}
-                                  </Button>
-                                  <Button onClick={handleCheckOut} disabled={todayAttendanceState !== 'CHECKED_IN' || attendanceLoading} variant="secondary" className="px-8 py-4 text-lg">
-                                      {todayAttendanceState === 'CHECKED_OUT' ? 'Çıkış Yapıldı' : 'Çıkış Yap'}
-                                  </Button>
-                              </div>
-                          </div>
-                      ) : (
-                          <div className="space-y-4">
-                              {[1,2,3,4,5].map(i => (
-                                  <div key={i} className="flex items-center justify-between bg-slate-800 p-4 rounded-lg border border-slate-700">
-                                      <div className="flex items-center gap-3">
-                                          <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-slate-400"><UserIcon size={20}/></div>
-                                          <div>
-                                              <div className="font-bold text-white">Öğrenci Adı {i}</div>
-                                              <div className="text-xs text-slate-500">12-A • 08:30 Giriş</div>
-                                          </div>
-                                      </div>
-                                      <span className="px-3 py-1 bg-green-500/10 text-green-500 text-xs font-bold rounded">OKULDA</span>
-                                  </div>
-                              ))}
-                          </div>
-                      )}
-                  </div>
-              );
-          case 'study':
-              return (
-                  <div className="max-w-5xl mx-auto py-6 animate-in fade-in">
-                      <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-2xl font-bold text-white">Etütler</h2>
-                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'STUDY', isOpen: true})} variant="primary"><Plus size={18} className="mr-2"/> Yeni Etüt</Button>}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {studySessions.map(session => (
-                              <div key={session.id} className="bg-slate-800 p-5 rounded-lg border border-slate-700">
-                                  <div className="flex items-center gap-2 mb-3 text-brand-400 text-sm font-bold uppercase"><Calendar size={14}/> {session.subject}</div>
-                                  <div className="text-white font-bold text-lg mb-1">{session.teacherName}</div>
-                                  <div className="text-slate-400 text-sm mb-4">{session.date} • {session.time}</div>
-                                  <div className="flex justify-between items-center text-xs text-slate-500">
-                                      <span>{session.location}</span>
-                                      <span className="px-2 py-1 bg-slate-700 rounded text-slate-300">{session.status}</span>
-                                  </div>
-                              </div>
-                          ))}
-                           {studySessions.length === 0 && <EmptyState icon={Calendar} title="Etüt Yok" description="Planlanmış etüt bulunmuyor." />}
-                      </div>
-                  </div>
-              );
-          case 'projects':
-              return (
-                  <div className="max-w-5xl mx-auto py-6 animate-in fade-in">
-                       <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-2xl font-bold text-white">Projeler</h2>
-                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'PROJECT', isOpen: true})} variant="primary"><Plus size={18} className="mr-2"/> Yeni Proje</Button>}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {projects.map(proj => (
-                              <div key={proj.id} className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-                                  <h3 className="text-lg font-bold text-white mb-2">{proj.title}</h3>
-                                  <p className="text-slate-400 text-sm mb-4">{proj.description}</p>
-                                  <div className="mb-2 flex justify-between text-xs text-slate-500">
-                                      <span>İlerleme</span>
-                                      <span>{proj.progress}%</span>
-                                  </div>
-                                  <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
-                                      <div className="bg-brand-500 h-full" style={{width: `${proj.progress}%`}}></div>
-                                  </div>
-                              </div>
-                          ))}
-                          {projects.length === 0 && <EmptyState icon={Layers} title="Proje Yok" description="Aktif proje bulunmuyor." />}
-                      </div>
-                  </div>
-              );
-          case 'announcements':
-              return (
-                  <div className="max-w-5xl mx-auto py-6 animate-in fade-in">
-                      <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-2xl font-bold text-white">Duyurular</h2>
-                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'ANNOUNCEMENT', isOpen: true})} variant="primary"><Plus size={18} className="mr-2"/> Yeni Duyuru</Button>}
-                      </div>
-                      <div className="space-y-4">
-                          {announcements.map(ann => (
-                              <div key={ann.id} className={`p-6 rounded-lg border flex gap-4 ${ann.priority === 'HIGH' ? 'bg-red-500/5 border-red-500/20' : 'bg-slate-800 border-slate-700'}`}>
-                                  <div className={`p-3 rounded-full h-fit ${ann.priority === 'HIGH' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                                      <Megaphone size={20}/>
-                                  </div>
-                                  <div>
-                                      <h3 className="text-lg font-bold text-white">{ann.title}</h3>
-                                      <p className="text-slate-400 text-sm mt-1">{ann.content}</p>
-                                      <div className="mt-3 text-xs text-slate-500 flex gap-3">
-                                          <span>{new Date(ann.date).toLocaleDateString()}</span>
-                                          <span>• {ann.authorName}</span>
-                                      </div>
-                                  </div>
-                              </div>
-                          ))}
-                          {announcements.length === 0 && <EmptyState icon={Megaphone} title="Duyuru Yok" description="Henüz bir duyuru yayınlanmadı." />}
-                      </div>
-                  </div>
-              );
-          case 'messages':
-              return (
-                  <div className="h-[calc(100vh-140px)] flex gap-4 animate-in fade-in">
-                      {/* Conversations List */}
-                      <div className="w-1/3 bg-slate-800 rounded-lg border border-slate-700 overflow-hidden flex flex-col">
-                          <div className="p-4 border-b border-slate-700 font-bold text-white">Mesajlar</div>
-                          <div className="flex-1 overflow-y-auto">
-                              {conversations.map(c => (
-                                  <div key={c.id} onClick={() => setActiveConversationId(c.id)} className={`p-4 flex items-center gap-3 cursor-pointer hover:bg-slate-700 transition-colors ${activeConversationId === c.id ? 'bg-slate-700' : ''}`}>
-                                      <img src={c.participantAvatar} className="w-10 h-10 rounded-full" alt=""/>
-                                      <div className="flex-1 min-w-0">
-                                          <div className="flex justify-between items-baseline">
-                                              <div className="font-bold text-white truncate">{c.participantName}</div>
-                                              <div className="text-[10px] text-slate-500">12:30</div>
-                                          </div>
-                                          <div className="text-sm text-slate-400 truncate">{c.lastMessage}</div>
-                                      </div>
-                                  </div>
-                              ))}
-                          </div>
-                      </div>
-                      {/* Chat Window */}
-                      <div className="flex-1 bg-slate-800 rounded-lg border border-slate-700 flex flex-col overflow-hidden">
-                          {activeConversationId ? (
-                              <>
-                                  <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/30">
-                                      <div className="flex items-center gap-3">
-                                          <img src={conversations.find(c => c.id === activeConversationId)?.participantAvatar} className="w-10 h-10 rounded-full" alt=""/>
-                                          <div className="font-bold text-white">{conversations.find(c => c.id === activeConversationId)?.participantName}</div>
-                                      </div>
-                                      <div className="flex gap-2">
-                                          <button onClick={() => handleStartCall('voice', 'Dr. Zeynep', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zeynep')} className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full"><Phone size={20}/></button>
-                                          <button onClick={() => handleStartCall('video', 'Dr. Zeynep', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zeynep')} className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full"><Video size={20}/></button>
-                                      </div>
-                                  </div>
-                                  <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-900/50">
-                                      {conversations.find(c => c.id === activeConversationId)?.messages.map(m => (
-                                          <div key={m.id} className={`flex ${m.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
-                                              <div className={`max-w-[70%] p-3 rounded-2xl ${m.senderId === user.id ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-slate-700 text-white rounded-tl-none'}`}>
-                                                  {m.messageType === 'text' && <p>{m.text}</p>}
-                                                  {m.messageType === 'image' && <img src={m.fileUrl} className="rounded-lg max-w-full" alt="sent"/>}
-                                                  {m.messageType === 'audio' && <div className="flex items-center gap-2"><PlayCircle size={20}/> Sesli Mesaj ({m.duration})</div>}
-                                                  {m.messageType === 'file' && <div className="flex items-center gap-2 underline"><FileText size={16}/> {m.fileName}</div>}
-                                                  <div className="text-[10px] opacity-50 mt-1 text-right">{new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                                              </div>
-                                          </div>
-                                      ))}
-                                  </div>
-                                  <div className="p-4 bg-slate-800 border-t border-slate-700">
-                                      <form onSubmit={(e) => { e.preventDefault(); handleSendMessage('text'); }} className="flex gap-2">
-                                          <button type="button" onClick={handleFileUpload} className="p-3 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full"><Paperclip size={20}/></button>
-                                          <button type="button" onMouseDown={handleVoiceRecord} onMouseUp={handleVoiceRecord} className={`p-3 rounded-full ${isRecording ? 'text-red-500 bg-red-500/10' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}><Mic size={20}/></button>
-                                          <input type="text" value={messageInput} onChange={e => setMessageInput(e.target.value)} placeholder="Mesaj yazın..." className="flex-1 bg-slate-900 border border-slate-700 rounded-full px-4 text-white focus:outline-none focus:border-brand-500" />
-                                          <button type="submit" className="p-3 bg-brand-600 hover:bg-brand-700 text-white rounded-full"><Send size={20}/></button>
-                                      </form>
-                                  </div>
-                              </>
-                          ) : (
-                              <div className="flex items-center justify-center h-full text-slate-500">Sohbet seçiniz</div>
-                          )}
-                      </div>
-                  </div>
-              );
-          default: // DASHBOARD
-              if (user.role === UserRole.INSTRUCTOR) {
-                  return (
-                      <div className="max-w-6xl mx-auto py-6 animate-in fade-in">
-                          <h2 className="text-2xl font-bold text-white mb-6">Kontrol Paneli</h2>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                              <StatCard title="Toplam Öğrenci" value={students.length.toString()} icon={Users} color="text-blue-500" />
-                              <StatCard title="Aktif Sınıflar" value={classes.length.toString()} icon={School} color="text-purple-500" />
-                              <StatCard title="Bekleyen Ödevler" value="12" icon={Clock} color="text-amber-500" />
-                              <StatCard title="Günlük Giriş" value="85%" icon={Activity} color="text-green-500" />
-                          </div>
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                              <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-                                  <div className="flex justify-between items-center mb-4">
-                                      <h3 className="font-bold text-white">Son Duyurular</h3>
-                                      <button onClick={() => setActiveTab('announcements')} className="text-xs text-brand-400 hover:text-brand-300">Tümü</button>
-                                  </div>
-                                  <div className="space-y-4">
-                                      {announcements.slice(0, 3).map(a => (
-                                          <div key={a.id} className="pb-3 border-b border-slate-700 last:border-0 last:pb-0">
-                                              <div className="font-bold text-white text-sm">{a.title}</div>
-                                              <div className="text-xs text-slate-500 mt-1">{a.content.substring(0, 60)}...</div>
-                                          </div>
-                                      ))}
-                                      {announcements.length === 0 && <div className="text-sm text-slate-500 text-center py-4">Duyuru yok.</div>}
-                                  </div>
-                              </div>
-                              <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-                                  <h3 className="font-bold text-white mb-4">Hızlı İşlemler</h3>
-                                  <div className="grid grid-cols-2 gap-3">
-                                      <Button onClick={() => setIsModalOpen({type: 'ANNOUNCEMENT', isOpen: true})} variant="secondary" className="justify-start"><Megaphone size={16} className="mr-2"/> Duyuru Ekle</Button>
-                                      <Button onClick={() => setIsModalOpen({type: 'ASSIGNMENT', isOpen: true})} variant="secondary" className="justify-start"><BookOpen size={16} className="mr-2"/> Ödev Ver</Button>
-                                      <Button onClick={() => setIsModalOpen({type: 'EXAM', isOpen: true})} variant="secondary" className="justify-start"><Award size={16} className="mr-2"/> Sınav Oluştur</Button>
-                                      <Button onClick={() => setActiveTab('students')} variant="secondary" className="justify-start"><Users size={16} className="mr-2"/> Öğrenci Listesi</Button>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                  );
-              } else {
-                  return (
-                      <div className="max-w-5xl mx-auto py-6 animate-in fade-in">
-                          <h2 className="text-2xl font-bold text-white mb-6">Öğrenci Paneli</h2>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                               <div className="bg-gradient-to-br from-brand-600 to-indigo-600 p-6 rounded-xl shadow-lg text-white">
-                                   <div className="text-brand-100 font-bold mb-1">Sırada Ne Var?</div>
-                                   <div className="text-2xl font-bold mb-4">Matematik Ödevi</div>
-                                   <div className="flex items-center gap-2 text-sm opacity-90"><Clock size={16}/> Yarın Son Gün</div>
-                               </div>
-                               <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                                   <div className="text-slate-400 font-bold mb-1">Başarı Puanı</div>
-                                   <div className="text-3xl font-bold text-white mb-2">85.4</div>
-                                   <div className="text-green-500 text-sm font-bold flex items-center"><TrendingUp size={16} className="mr-1"/> +2.4 Artış</div>
-                               </div>
-                               <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                                   <div className="text-slate-400 font-bold mb-1">Devamsızlık</div>
-                                   <div className="text-3xl font-bold text-white mb-2">2.5 Gün</div>
-                                   <div className="w-full bg-slate-700 h-2 rounded-full"><div className="bg-green-500 h-full w-[10%]"></div></div>
-                               </div>
-                          </div>
-                          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-                              <h3 className="font-bold text-white mb-4">Yaklaşan Ödevler</h3>
-                              <div className="space-y-3">
-                                  {assignments.slice(0, 3).map(a => (
-                                      <div key={a.id} className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg">
-                                          <div className="flex items-center gap-3">
-                                              <div className="bg-brand-500/20 p-2 rounded text-brand-500"><BookOpen size={16}/></div>
-                                              <div>
-                                                  <div className="font-bold text-white text-sm">{a.title}</div>
-                                                  <div className="text-xs text-slate-500">{new Date(a.dueDate).toLocaleDateString()}</div>
-                                              </div>
-                                          </div>
-                                          <Button variant="outline" className="text-xs px-3 py-1 h-auto">Detay</Button>
-                                      </div>
-                                  ))}
-                                  {assignments.length === 0 && <div className="text-sm text-slate-500 text-center">Ödeviniz yok.</div>}
-                              </div>
-                          </div>
-                      </div>
-                  );
-              }
-      }
+  const handleSendMessage = async () => {
+    if (!chatInput.trim()) return;
+    const userMsg = chatInput;
+    setChatInput('');
+    setChatLoading(true);
+    
+    const newHistory = [...chatHistory, { role: 'user' as const, parts: [{ text: userMsg }] }];
+    setChatHistory(newHistory);
+    
+    const response = await chatWithStudentAssistant(userMsg, newHistory);
+    setChatHistory([...newHistory, { role: 'model' as const, parts: [{ text: response }] }]);
+    setChatLoading(false);
   };
 
-  return (
-    <div className="min-h-screen bg-[#020617] text-gray-100 font-sans flex overflow-hidden">
-      {/* SIDEBAR */}
-      <div className={`flex-shrink-0 bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col ${collapsed ? 'w-20' : 'w-64'}`}>
-        <div className={`p-6 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
-             {!collapsed && (
-               <div className="flex items-center gap-2 font-bold text-xl text-white">
-                   <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center"><GraduationCap size={16}/></div>
-                   Enid<span className="text-brand-500">AI</span>
-               </div>
-             )}
-             <button onClick={() => setCollapsed(!collapsed)} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg">
-                 {collapsed ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}
-             </button>
-        </div>
+  const handleCreateAssignment = async (data: Partial<Assignment>) => {
+    await db.collection('assignments').add({
+       ...data,
+       createdBy: user?.id,
+       createdAt: new Date().toISOString()
+    });
+    setIsAddAssignmentModalOpen(false);
+  };
+
+  const handleCreateAnnouncement = async (title: string, content: string, priority: 'NORMAL' | 'HIGH', classes: string[], fields: string[]) => {
+      await db.collection('announcements').add({
+          title, content, priority, targetClasses: classes, targetFields: fields,
+          date: new Date().toISOString(),
+          authorName: user?.name || 'Yönetim'
+      });
+      setIsAddAnnouncementModalOpen(false);
+  };
+
+  const handleStartExam = (exam: Exam) => {
+    setActiveExam(exam);
+    setExamTimer(0);
+    setExamResult(null);
+    setExamAnswers({});
+  };
+
+  const handleSubmitExam = async () => {
+    if (!activeExam) return;
+    let correct = 0;
+    let wrong = 0;
+    
+    activeExam.questions.forEach(q => {
+        if (examAnswers[q.id] === q.correctAnswer) correct++;
+        else wrong++;
+    });
+
+    const score = Math.round((correct / activeExam.questions.length) * 100);
+    const result: ExamResult = {
+        id: Math.random().toString(),
+        examId: activeExam.id,
+        studentId: user!.id,
+        score, correctCount: correct, wrongCount: wrong,
+        submittedAt: new Date().toISOString()
+    };
+    
+    setExamResult(result);
+    await db.collection('exam_results').add(result);
+  };
+
+  // --- Render Views ---
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen bg-[#020617] flex flex-col items-center justify-center text-white">
+         <div className="relative w-24 h-24 mb-8">
+            <div className="absolute inset-0 border-t-4 border-amber-500 rounded-full animate-spin"></div>
+            <div className="absolute inset-2 border-r-4 border-indigo-500 rounded-full animate-spin-slow"></div>
+         </div>
+         <h1 className="text-3xl font-black tracking-tight animate-pulse">ENID AI</h1>
+         <p className="text-gray-500 mt-2 font-mono">Sistem Başlatılıyor...</p>
+      </div>
+    );
+  }
+
+  // --- Landing Page & Auth ---
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#020617] text-white font-sans overflow-x-hidden selection:bg-amber-500/30">
         
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-             <SidebarItem icon={Layout} label="Panel" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} collapsed={collapsed} />
-             {user.role === UserRole.INSTRUCTOR && <SidebarItem icon={Users} label="Öğrenciler" active={activeTab === 'students'} onClick={() => setActiveTab('students')} collapsed={collapsed} />}
-             <SidebarItem icon={School} label="Sınıflar" active={activeTab === 'classes'} onClick={() => setActiveTab('classes')} collapsed={collapsed} />
-             <SidebarItem icon={Briefcase} label="Alanlar" active={activeTab === 'fields'} onClick={() => setActiveTab('fields')} collapsed={collapsed} />
-             <SidebarItem icon={BookOpen} label="Ödevler" active={activeTab === 'assignments'} onClick={() => setActiveTab('assignments')} collapsed={collapsed} />
-             <SidebarItem icon={Award} label="Sınavlar" active={activeTab === 'exams'} onClick={() => setActiveTab('exams')} collapsed={collapsed} />
-             <SidebarItem icon={Megaphone} label="Duyurular" active={activeTab === 'announcements'} onClick={() => setActiveTab('announcements')} collapsed={collapsed} badge={announcements.length > 0 ? announcements.length : undefined} />
-             <SidebarItem icon={Calendar} label="Etütler" active={activeTab === 'study'} onClick={() => setActiveTab('study')} collapsed={collapsed} />
-             <SidebarItem icon={Layers} label="Projeler" active={activeTab === 'projects'} onClick={() => setActiveTab('projects')} collapsed={collapsed} />
-             <SidebarItem icon={Fingerprint} label="Giriş/Çıkış" active={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} collapsed={collapsed} />
-             <SidebarItem icon={MessageCircle} label="Mesajlar" active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} collapsed={collapsed} />
-        </div>
-
-        <div className="p-4 border-t border-slate-800">
-             <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-                 <img src={user.avatarUrl} className="w-10 h-10 rounded-full bg-slate-700" alt=""/>
-                 {!collapsed && (
-                     <div className="min-w-0">
-                         <div className="font-bold text-sm text-white truncate">{user.name}</div>
-                         <div className="text-xs text-slate-500 truncate">{user.role === UserRole.INSTRUCTOR ? 'Eğitmen' : 'Öğrenci'}</div>
-                     </div>
-                 )}
-             </div>
-             <button onClick={handleLogout} className={`mt-4 w-full flex items-center justify-center gap-2 p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors ${collapsed ? 'px-0' : ''}`}>
-                 <LogOut size={18}/> {!collapsed && "Çıkış Yap"}
-             </button>
-        </div>
-      </div>
-
-      {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#020617]">
-          {/* Header */}
-          <header className="h-16 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between px-8 backdrop-blur-md">
-               <h1 className="text-xl font-bold text-white capitalize">{activeTab === 'dashboard' ? (user.role === UserRole.INSTRUCTOR ? 'Komuta Merkezi' : 'Öğrenci Paneli') : activeTab}</h1>
-               <div className="flex items-center gap-4">
-                   <div className="relative">
-                       <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"/>
-                       <input type="text" placeholder="Ara..." className="bg-slate-800 border border-slate-700 text-white pl-10 pr-4 py-2 rounded-full text-sm focus:outline-none focus:border-brand-500 w-64"/>
-                   </div>
-                   <button className="p-2 text-slate-400 hover:text-white relative"><Bell size={20}/><span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span></button>
-               </div>
-          </header>
-
-          <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
-              {renderContent()}
-          </main>
-      </div>
-
-      {/* GLOBAL MODALS */}
-      {isModalOpen.isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-slate-900 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-               <h3 className="font-bold text-white text-lg">
-                   {isModalOpen.type === 'ASSIGNMENT' && 'Yeni Ödev Ekle'}
-                   {isModalOpen.type === 'EXAM' && 'Yeni Sınav Oluştur'}
-                   {isModalOpen.type === 'ANNOUNCEMENT' && 'Duyuru Yayınla'}
-                   {isModalOpen.type === 'CLASS' && 'Sınıf Ekle'}
-                   {isModalOpen.type === 'FIELD' && 'Alan Ekle'}
-                   {isModalOpen.type === 'STUDY' && 'Etüt Planla'}
-                   {isModalOpen.type === 'PROJECT' && 'Proje Başlat'}
-               </h3>
-               <button onClick={() => setIsModalOpen({...isModalOpen, isOpen: false})} className="text-slate-500 hover:text-white"><X size={20}/></button>
+        {/* Navigation */}
+        <nav className="fixed w-full z-50 top-0 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5">
+          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-gradient-to-tr from-amber-400 to-orange-600 flex items-center justify-center font-bold text-black text-xl">E</div>
+                <span className="font-black text-2xl tracking-tight">ENID AI</span>
             </div>
-            <div className="p-6 space-y-4">
-                {isModalOpen.type === 'ASSIGNMENT' && (
-                    <>
-                       {/* AI Generator */}
-                       <div className="p-4 bg-brand-900/10 rounded-xl border border-brand-900/30 mb-4">
-                           <div className="flex items-center gap-2 text-brand-400 font-bold mb-2 text-xs uppercase tracking-wider"><Sparkles size={14}/> AI Asistan</div>
-                           <div className="flex gap-2">
-                               <input type="text" placeholder="Konu (örn: Türev)" value={assignmentTopic} onChange={e => setAssignmentTopic(e.target.value)} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 text-sm text-white focus:border-brand-500 outline-none"/>
-                               <Button onClick={handleGenerateAssignment} isLoading={isGeneratingAssignment} variant="luxury" className="py-2 px-4 text-xs h-10">Oluştur</Button>
-                           </div>
-                       </div>
-                       <input type="text" placeholder="Başlık" value={generatedAssignment?.title || formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                       <textarea placeholder="Açıklama" value={generatedAssignment?.description || formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none h-32"></textarea>
-                       <div className="grid grid-cols-2 gap-4">
-                           <input type="text" placeholder="Ders" value={formData.subject || ''} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                           <input type="date" value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                       </div>
-                       <Button onClick={handleAddAssignment} variant="primary" className="w-full">Kaydet</Button>
-                    </>
-                )}
-                
-                {isModalOpen.type === 'EXAM' && (
-                    <>
-                        <input type="text" placeholder="Sınav Başlığı" onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                        <textarea placeholder="Açıklama" onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none h-24"></textarea>
-                        <div className="grid grid-cols-2 gap-4">
-                            <input type="text" placeholder="Ders" onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                            <input type="number" placeholder="Süre (dk)" onChange={e => setFormData({...formData, duration: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                        </div>
-                        <Button onClick={handleAddExam} variant="primary" className="w-full">Sınavı Oluştur</Button>
-                    </>
-                )}
-
-                {isModalOpen.type === 'ANNOUNCEMENT' && (
-                    <>
-                         <input type="text" placeholder="Başlık" onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                         <textarea placeholder="İçerik" onChange={e => setFormData({...formData, content: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none h-32"></textarea>
-                         <Button onClick={handleAddAnnouncement} variant="primary" className="w-full">Yayınla</Button>
-                    </>
-                )}
-                
-                {isModalOpen.type === 'CLASS' && (
-                    <>
-                         <input type="text" placeholder="Sınıf Adı (Örn: 10-B)" onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                         <Button onClick={handleAddClass} variant="primary" className="w-full">Ekle</Button>
-                    </>
-                )}
-                
-                {isModalOpen.type === 'FIELD' && (
-                    <>
-                         <input type="text" placeholder="Alan Adı (Örn: Sözel)" onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                         <Button onClick={handleAddField} variant="primary" className="w-full">Ekle</Button>
-                    </>
-                )}
-                
-                {isModalOpen.type === 'STUDY' && (
-                    <>
-                        <input type="text" placeholder="Ders" onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                        <input type="text" placeholder="Öğretmen" onChange={e => setFormData({...formData, teacherName: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                        <div className="grid grid-cols-2 gap-4">
-                            <input type="date" onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                            <input type="time" onChange={e => setFormData({...formData, time: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                        </div>
-                        <Button onClick={handleAddStudy} variant="primary" className="w-full">Planla</Button>
-                    </>
-                )}
-
-                {isModalOpen.type === 'PROJECT' && (
-                    <>
-                        <input type="text" placeholder="Proje Başlığı" onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                        <textarea placeholder="Proje Detayları" onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none h-32"></textarea>
-                        <input type="date" onChange={e => setFormData({...formData, deadline: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-brand-500 outline-none"/>
-                        <Button onClick={handleAddProject} variant="primary" className="w-full">Proje Başlat</Button>
-                    </>
-                )}
+            <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
+                <button onClick={() => document.getElementById('features')?.scrollIntoView({behavior: 'smooth'})} className="hover:text-white transition-colors">Özellikler</button>
+                <button onClick={() => document.getElementById('stats')?.scrollIntoView({behavior: 'smooth'})} className="hover:text-white transition-colors">Başarılar</button>
+                <button onClick={() => document.getElementById('about')?.scrollIntoView({behavior: 'smooth'})} className="hover:text-white transition-colors">Hakkımızda</button>
+            </div>
+            <div className="flex items-center gap-4">
+                <Button variant="ghost" className="text-white hover:bg-white/5" onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}>Giriş Yap</Button>
+                <Button variant="luxury" onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}>Kayıt Ol</Button>
             </div>
           </div>
-        </div>
-      )}
+        </nav>
 
-      {/* FLOATING AI ASSISTANT */}
-       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none">
-            {/* Chat Window */}
-            <div className={`pointer-events-auto bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-80 mb-4 overflow-hidden transition-all duration-300 origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 h-0'}`}>
-                <div className="p-4 bg-gradient-to-r from-brand-600 to-indigo-600 flex justify-between items-center">
-                    <div className="flex items-center gap-2 text-white font-bold">
-                        <Sparkles size={16}/> Enid AI
-                    </div>
-                    <button onClick={() => setIsChatOpen(false)} className="text-white/80 hover:text-white"><X size={16}/></button>
+        {/* Hero Section */}
+        <header className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-6 overflow-hidden">
+             {/* Background Effects */}
+             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] -z-10 animate-pulse-slow"></div>
+             <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-amber-600/10 rounded-full blur-[100px] -z-10"></div>
+
+             <div className="max-w-7xl mx-auto text-center relative z-10">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-amber-400 text-sm font-bold mb-8 animate-fade-in-up">
+                    <Sparkles size={16} />
+                    <span>Yapay Zeka Destekli Eğitim Platformu</span>
                 </div>
-                <div className="h-80 overflow-y-auto p-4 space-y-3 bg-slate-900">
-                    {chatMessages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[80%] p-3 rounded-xl text-sm ${msg.role === 'user' ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'}`}>
-                                {msg.text}
+                <h1 className="text-5xl lg:text-8xl font-black tracking-tight mb-8 leading-tight">
+                    Geleceğin Eğitimini <br/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-400 to-amber-200 animate-shimmer bg-[length:200%_auto]">Bugün Yönetin.</span>
+                </h1>
+                <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed">
+                    Enid AI, öğrenci takibini, ödev yönetimini ve sınav analizlerini yapay zeka ile otomatikleştirir. 
+                    Eğitmenler için zaman, öğrenciler için başarı kazandırır.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <Button variant="luxury" className="px-8 py-4 text-lg w-full sm:w-auto" onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}>
+                        Hemen Başla <ChevronRight className="ml-2" />
+                    </Button>
+                    <Button variant="secondary" className="px-8 py-4 text-lg w-full sm:w-auto bg-white/5 border-white/10 text-white hover:bg-white/10" onClick={() => document.getElementById('features')?.scrollIntoView({behavior: 'smooth'})}>
+                        Özellikleri Keşfet
+                    </Button>
+                </div>
+             </div>
+             
+             {/* Hero Image / 3D Element */}
+             <div className="mt-20 relative max-w-5xl mx-auto perspective-1000 group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-indigo-600 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
+                <div className="relative glass-panel bg-[#0f172a]/80 p-4 rounded-2xl border border-white/10 shadow-2xl transform rotate-x-12 group-hover:rotate-x-0 transition-all duration-700">
+                    <img src="https://images.unsplash.com/photo-1664575602276-acd073f104c1?q=80&w=2070&auto=format&fit=crop" alt="Dashboard Preview" className="rounded-lg w-full h-auto opacity-90" />
+                </div>
+             </div>
+        </header>
+
+        {/* Marquee Stats */}
+        <div id="stats" className="py-12 border-y border-white/5 bg-white/5 backdrop-blur-sm overflow-hidden relative">
+             <div className="flex gap-16 items-center animate-marquee whitespace-nowrap min-w-full">
+                {[...Array(10)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 text-2xl font-black text-gray-500/50 uppercase">
+                        <Star size={24} className="text-amber-500/50" />
+                        <span>ODTÜ</span>
+                        <span>BOĞAZİÇİ</span>
+                        <span>İTÜ</span>
+                        <span>KOÇ</span>
+                        <span>SABANCI</span>
+                        <span>BİLKENT</span>
+                    </div>
+                ))}
+             </div>
+        </div>
+
+        {/* Features Bento Grid */}
+        <section id="features" className="py-32 px-6 max-w-7xl mx-auto">
+            <h2 className="text-4xl font-black text-center mb-16">Eğitimin Yeni Standardı</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="glass-panel p-8 rounded-3xl col-span-1 md:col-span-2 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity"><Bot size={120} /></div>
+                    <h3 className="text-2xl font-bold mb-4">Gemini AI Asistanı</h3>
+                    <p className="text-gray-400 mb-6 max-w-md">Öğrenciler için 7/24 özel ders asistanı. Soru çözümü, konu anlatımı ve motivasyon desteği anında cebinizde.</p>
+                    <div className="bg-slate-900/50 p-4 rounded-xl border border-white/10 max-w-sm">
+                        <div className="flex items-center gap-3 mb-2"><div className="w-2 h-2 rounded-full bg-green-500"></div><span className="text-xs text-gray-400">Enid AI yazıyor...</span></div>
+                        <p className="text-sm text-indigo-300">"Türev alma kurallarını senin için özetleyebilirim, hazır mısın?"</p>
+                    </div>
+                </div>
+                <div className="glass-panel p-8 rounded-3xl bg-gradient-to-br from-amber-900/20 to-transparent border-amber-500/20">
+                    <PieChart size={48} className="text-amber-400 mb-6" />
+                    <h3 className="text-2xl font-bold mb-4">Akıllı Analiz</h3>
+                    <p className="text-gray-400">Öğrenci performansını yapay zeka ile analiz edin, eksik konuları nokta atışı tespit edin.</p>
+                </div>
+                <div className="glass-panel p-8 rounded-3xl">
+                    <Users size={48} className="text-blue-400 mb-6" />
+                    <h3 className="text-2xl font-bold mb-4">Sınıf Yönetimi</h3>
+                    <p className="text-gray-400">Yoklama, ödev takibi ve veli bilgilendirme tek ekranda.</p>
+                </div>
+                 <div className="glass-panel p-8 rounded-3xl col-span-1 md:col-span-2">
+                    <div className="flex items-center justify-between mb-6">
+                         <h3 className="text-2xl font-bold">Hibrit Sınav Sistemi</h3>
+                         <CheckCircle size={32} className="text-green-400" />
+                    </div>
+                    <p className="text-gray-400">Hem online hem yüz yüze sınavlar oluşturun. Sonuçlar anında sisteme işlensin.</p>
+                </div>
+            </div>
+        </section>
+
+        {/* Footer */}
+        <footer id="about" className="bg-[#0f172a] border-t border-white/10 pt-20 pb-10 px-6">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div className="col-span-1 md:col-span-2">
+                    <div className="flex items-center gap-2 mb-6">
+                         <div className="w-8 h-8 rounded bg-amber-500 flex items-center justify-center font-bold text-black">E</div>
+                         <span className="font-black text-2xl">ENID AI</span>
+                    </div>
+                    <p className="text-gray-400 max-w-sm">Eğitim teknolojilerinde devrim yaratan yapay zeka çözümleri. Öğrenci başarısını şansa bırakmayın.</p>
+                </div>
+                <div>
+                    <h4 className="font-bold text-white mb-6">Platform</h4>
+                    <ul className="space-y-4 text-gray-400 text-sm">
+                        <li><a href="#" className="hover:text-amber-400">Özellikler</a></li>
+                        <li><a href="#" className="hover:text-amber-400">Fiyatlandırma</a></li>
+                        <li><a href="#" className="hover:text-amber-400">Güvenlik</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 className="font-bold text-white mb-6">İletişim</h4>
+                    <ul className="space-y-4 text-gray-400 text-sm">
+                        <li>info@enidai.com</li>
+                        <li>+90 (212) 555 00 00</li>
+                        <li>İstanbul, Türkiye</li>
+                    </ul>
+                </div>
+            </div>
+            <div className="max-w-7xl mx-auto pt-8 border-t border-white/5 text-center text-gray-500 text-sm">
+                &copy; 2024 Enid AI Teknoloji A.Ş. Tüm hakları saklıdır.
+            </div>
+        </footer>
+
+        {/* Auth Modal */}
+        {showAuthModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+             <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setShowAuthModal(false)}></div>
+             <div className="relative z-10 w-full max-w-5xl bg-[#0f172a] rounded-3xl border border-white/10 shadow-2xl flex overflow-hidden min-h-[600px] animate-in zoom-in-95 duration-300">
+                
+                {/* Left Side Visual */}
+                <div className="hidden lg:flex w-1/2 bg-[#020617] relative items-center justify-center p-12 overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+                    <div className="absolute top-0 left-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px]"></div>
+                    <div className="absolute bottom-0 right-0 w-64 h-64 bg-amber-500/20 rounded-full blur-[80px]"></div>
+                    
+                    <div className="relative z-10 text-center">
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-600 flex items-center justify-center font-black text-black text-4xl mb-8 mx-auto shadow-glow">E</div>
+                        <h2 className="text-3xl font-black text-white mb-4">Hoş Geldiniz</h2>
+                        <p className="text-gray-400 leading-relaxed">Enid AI ile eğitim hayatınızı dijitalleştirin. Tek platform, sınırsız potansiyel.</p>
+                    </div>
+                </div>
+
+                {/* Right Side Form */}
+                <div className="w-full lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center bg-[#0f172a]">
+                    <div className="flex justify-end mb-4">
+                        <button onClick={() => setShowAuthModal(false)} className="text-gray-500 hover:text-white"><X size={24} /></button>
+                    </div>
+                    
+                    <div className="mb-8">
+                        <div className="flex gap-4 p-1 bg-white/5 rounded-xl border border-white/10 mb-8">
+                             <button onClick={() => { setLoginRole(UserRole.STUDENT); setIsInstructorVerified(false); }} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${loginRole === UserRole.STUDENT ? 'bg-amber-500 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}>Öğrenci</button>
+                             <button onClick={() => { setLoginRole(UserRole.INSTRUCTOR); setAuthMode('login'); }} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${loginRole === UserRole.INSTRUCTOR ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>Eğitmen</button>
+                        </div>
+                        <h3 className="text-2xl font-bold text-white mb-2">{authMode === 'login' ? 'Giriş Yap' : 'Hesap Oluştur'}</h3>
+                        <p className="text-gray-400 text-sm">Devam etmek için bilgilerinizi giriniz.</p>
+                    </div>
+
+                    {loginRole === UserRole.INSTRUCTOR && !isInstructorVerified ? (
+                         <div className="space-y-4">
+                            <div className="bg-amber-900/20 border border-amber-500/30 p-4 rounded-xl flex items-start gap-3">
+                                <Lock className="text-amber-500 mt-1 shrink-0" size={20} />
+                                <p className="text-amber-200 text-sm">Eğitmen paneli sadece yetkili personel içindir. Lütfen size verilen erişim kodunu giriniz.</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Erişim Kodu</label>
+                                <input 
+                                    type="password"
+                                    value={instructorCode}
+                                    onChange={(e) => setInstructorCode(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all outline-none"
+                                    placeholder="Kodu giriniz..."
+                                />
+                            </div>
+                            <Button 
+                                className="w-full" variant="primary"
+                                onClick={() => {
+                                    if(instructorCode === 'wasd123wasd') setIsInstructorVerified(true);
+                                    else setAuthError('Hatalı erişim kodu.');
+                                }}
+                            >
+                                Doğrula
+                            </Button>
+                            {authError && <p className="text-red-500 text-sm mt-2">{authError}</p>}
+                         </div>
+                    ) : (
+                        <form onSubmit={handleAuthSubmit} className="space-y-4">
+                            {authMode === 'register' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Ad Soyad</label>
+                                        <input required name="name" autoComplete="name" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500 transition-all outline-none" placeholder="Örn: Ahmet Yılmaz" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                                    </div>
+                                    {loginRole === UserRole.STUDENT && (
+                                        <>
+                                            <div className="col-span-2">
+                                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">TC Kimlik No</label>
+                                                 <input required name="tcNo" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500 transition-all outline-none" placeholder="11 haneli TC" value={formData.tcNo} onChange={e => setFormData({...formData, tcNo: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sınıf</label>
+                                                 <select required name="className" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500 transition-all outline-none" value={formData.className} onChange={e => setFormData({...formData, className: e.target.value})}>
+                                                    <option value="">Seçiniz</option>
+                                                    {['9-A','9-B','10-A','10-B','11-A','11-B','12-A','12-B','Mezun','Hazırlık'].map(c => <option key={c} value={c} className="text-black">{c}</option>)}
+                                                 </select>
+                                            </div>
+                                            <div>
+                                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Alan</label>
+                                                 <select required name="field" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500 transition-all outline-none" value={formData.field} onChange={e => setFormData({...formData, field: e.target.value})}>
+                                                    <option value="">Seçiniz</option>
+                                                    {['Sayısal','Eşit Ağırlık','Sözel','Dil'].map(f => <option key={f} value={f} className="text-black">{f}</option>)}
+                                                 </select>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                            
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">E-posta Adresi</label>
+                                <input required type="email" name="email" autoComplete="email" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500 transition-all outline-none" placeholder="ornek@email.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Şifre</label>
+                                    <input required type="password" name="password" autoComplete="new-password" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500 transition-all outline-none" placeholder="******" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Güvenlik PIN</label>
+                                    <input required type="text" name="pin" autoComplete="off" maxLength={4} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500 transition-all outline-none" placeholder="4 hane" value={formData.pin} onChange={e => setFormData({...formData, pin: e.target.value})} />
+                                </div>
+                            </div>
+
+                            {authError && (
+                                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-sm">
+                                    <AlertCircle size={16} />
+                                    {authError}
+                                </div>
+                            )}
+
+                            <Button variant="luxury" type="submit" className="w-full py-4 text-base" isLoading={loading}>
+                                {authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol'}
+                            </Button>
+
+                            <div className="text-center mt-6">
+                                <button type="button" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="text-sm text-gray-400 hover:text-amber-400 transition-colors">
+                                    {authMode === 'login' ? 'Hesabın yok mu? Kayıt Ol' : 'Zaten hesabın var mı? Giriş Yap'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+                </div>
+             </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- Authenticated Layout ---
+
+  // Decide Navigation Items based on Role
+  const navItems = user.role === UserRole.INSTRUCTOR ? [
+    { id: 'dashboard', icon: Layout, label: 'Kontrol Merkezi' },
+    { id: 'students', icon: Users, label: 'Öğrenciler' },
+    { id: 'classes', icon: School, label: 'Sınıflar' },
+    { id: 'fields', icon: Layers, label: 'Alanlar' },
+    { id: 'assignments', icon: FileText, label: 'Ödev Yönetimi' },
+    { id: 'exams', icon: Edit2, label: 'Sınavlar' },
+    { id: 'attendance', icon: DoorOpen, label: 'Giriş/Çıkış Logları' },
+    { id: 'announcements', icon: Megaphone, label: 'Duyurular' },
+    { id: 'messages', icon: MessageSquare, label: 'Mesajlar' },
+  ] : [
+    { id: 'dashboard', icon: Layout, label: 'Sınıfım' },
+    { id: 'assignments', icon: BookOpen, label: 'Ödevlerim' },
+    { id: 'exams', icon: Edit2, label: 'Sınavlarım' },
+    { id: 'attendance', icon: DoorOpen, label: 'Yoklama' },
+    { id: 'study', icon: Clock, label: 'Etüt Programı' },
+    { id: 'projects', icon: Briefcase, label: 'Projelerim' },
+    { id: 'messages', icon: MessageSquare, label: 'Eğitmenle Sohbet' },
+  ];
+
+  const renderContent = () => {
+    // === Exam Taking View ===
+    if (activeExam) {
+      return (
+        <div className="fixed inset-0 z-50 bg-[#020617] text-white flex flex-col">
+            {/* Header */}
+            <div className="h-20 border-b border-white/10 flex items-center justify-between px-8 bg-white/5 backdrop-blur-md">
+                <div className="flex items-center gap-4">
+                    <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400"><Edit2 size={24}/></div>
+                    <div>
+                        <h2 className="text-xl font-bold">{activeExam.title}</h2>
+                        <p className="text-sm text-gray-400">{activeExam.subject}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-full border border-white/10 font-mono text-amber-400">
+                        <Timer size={18} />
+                        {Math.floor(examTimer / 60)}:{(examTimer % 60).toString().padStart(2, '0')}
+                    </div>
+                    <Button variant="danger" onClick={() => { if(confirm('Sınavdan çıkmak istediğine emin misin?')) setActiveExam(null); }}>Çıkış</Button>
+                    {!examResult && <Button variant="primary" onClick={handleSubmitExam}>Sınavı Bitir</Button>}
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full">
+                {examResult ? (
+                    <div className="glass-panel p-12 rounded-3xl text-center animate-fade-in-up">
+                        <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-green-400 to-emerald-600 mx-auto mb-8 flex items-center justify-center shadow-glow">
+                             <Trophy size={64} className="text-white" />
+                        </div>
+                        <h2 className="text-4xl font-black mb-2">Sınav Tamamlandı!</h2>
+                        <p className="text-gray-400 text-lg mb-8">Sonuçların aşağıda yer almaktadır.</p>
+                        
+                        <div className="grid grid-cols-3 gap-6 mb-8">
+                            <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+                                <div className="text-4xl font-black text-indigo-400 mb-1">{examResult.score}</div>
+                                <div className="text-xs text-gray-400 uppercase font-bold">Puan</div>
+                            </div>
+                            <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+                                <div className="text-4xl font-black text-green-400 mb-1">{examResult.correctCount}</div>
+                                <div className="text-xs text-gray-400 uppercase font-bold">Doğru</div>
+                            </div>
+                            <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+                                <div className="text-4xl font-black text-red-400 mb-1">{examResult.wrongCount}</div>
+                                <div className="text-xs text-gray-400 uppercase font-bold">Yanlış</div>
+                            </div>
+                        </div>
+                        <Button variant="outline" onClick={() => setActiveExam(null)}>Listeye Dön</Button>
+                    </div>
+                ) : (
+                    <div className="space-y-8">
+                        {activeExam.questions.map((q, idx) => (
+                            <div key={q.id} className="glass-panel p-8 rounded-3xl">
+                                <div className="flex items-start gap-4 mb-6">
+                                    <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm shrink-0">{idx + 1}</span>
+                                    <p className="text-lg font-medium leading-relaxed">{q.text}</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-12">
+                                    {q.options?.map((opt, optIdx) => (
+                                        <button 
+                                            key={optIdx}
+                                            onClick={() => setExamAnswers({...examAnswers, [q.id]: opt})}
+                                            className={`p-4 rounded-xl text-left border transition-all ${
+                                                examAnswers[q.id] === opt 
+                                                ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' 
+                                                : 'bg-white/5 border-white/10 hover:bg-white/10 text-gray-300'
+                                            }`}
+                                        >
+                                            <span className="font-bold mr-2 opacity-50">{String.fromCharCode(65 + optIdx)})</span> {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+      );
+    }
+
+    switch (activeTab) {
+      case 'dashboard':
+        return user.role === UserRole.INSTRUCTOR ? (
+          <div className="space-y-8 animate-fade-in-up">
+            {/* Instructor Hero - Cinematic Glass Cockpit */}
+            <div className="relative h-[450px] rounded-[3rem] overflow-hidden group shadow-2xl border border-white/10 bg-[#0f172a]">
+                {/* 3D Background Element */}
+                <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl animate-blob opacity-50"></div>
+                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-amber-500/20 to-orange-500/20 rounded-full blur-3xl animate-blob animation-delay-4000 opacity-50"></div>
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+
+                <div className="relative z-10 h-full flex flex-col justify-between p-12">
+                     <div className="flex justify-between items-start">
+                         <div>
+                             <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-emerald-400 text-xs font-bold tracking-widest uppercase mb-6 backdrop-blur-md">
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                Enid AI Online
+                            </div>
+                            <h2 className="text-7xl font-thin text-white tracking-tighter mb-4">
+                                Merhaba, <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">{user.name.split(' ')[0]}</span>
+                            </h2>
+                            <p className="text-gray-400 text-xl max-w-xl leading-relaxed">
+                                Eğitim yönetimi için yapay zeka sistemleri hazır. 
+                                Bugün odaklanmanız gereken <span className="text-white font-bold">{assignments.length} yeni ödev</span> ve <span className="text-white font-bold">{students.length} öğrenci</span> var.
+                            </p>
+                         </div>
+                         
+                         {/* AI System Health HUD */}
+                         <div className="hidden lg:flex w-80 h-48 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md flex-col overflow-hidden relative shadow-2xl">
+                             <div className="absolute inset-0 bg-grid-white/[0.05]"></div>
+                             
+                             <div className="flex justify-between items-center p-4 border-b border-white/5 bg-white/5">
+                                 <span className="text-[10px] font-mono font-bold text-indigo-400 tracking-widest">SYSTEM_DIAGNOSTICS</span>
+                                 <div className="flex gap-1">
+                                     <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                                     <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                                 </div>
+                             </div>
+
+                             <div className="flex-1 p-4 relative">
+                                 {/* Rotating Rings */}
+                                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border border-indigo-500/30 border-t-indigo-500 animate-spin-slow"></div>
+                                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full border border-purple-500/30 border-b-purple-500 animate-spin reverse duration-1000"></div>
+                                 
+                                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                                     <div className="text-2xl font-black text-white">98%</div>
+                                     <div className="text-[9px] text-gray-500 uppercase tracking-widest">Efficiency</div>
+                                 </div>
+
+                                 {/* Fake Code Stream */}
+                                 <div className="absolute bottom-2 left-4 text-[9px] font-mono text-emerald-500/70">
+                                     > Analyzing logs...<br/>
+                                     > Sync complete.
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <div className="flex gap-4">
+                         <Button variant="luxury" onClick={() => setActiveTab('students')} className="px-8 py-4 text-base">Öğrenci Paneli</Button>
+                         <Button variant="secondary" onClick={() => setIsAddAssignmentModalOpen(true)} className="px-8 py-4 text-base bg-white/5 text-white border-white/10 hover:bg-white/10">Hızlı Ödev Ata</Button>
+                     </div>
+                </div>
+            </div>
+
+            {/* Bento Grid Stats - Ultramodern & Minimal */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <DashboardCard 
+                    title="TOPLAM ÖĞRENCİ" 
+                    value={students.length.toString()} 
+                    subtitle="Aktif Kayıt" 
+                    icon={Users} 
+                    colorClass="text-indigo-400"
+                    trend="+5%"
+                />
+                <DashboardCard 
+                    title="SINIF SAYISI" 
+                    value={classesList.length.toString()} 
+                    subtitle="Eğitim Grubu" 
+                    icon={School} 
+                    colorClass="text-purple-400"
+                />
+                <DashboardCard 
+                    title="GÜNLÜK GİRİŞ" 
+                    value={attendanceRecords.filter(r => r.date.startsWith(new Date().toISOString().split('T')[0])).length.toString()} 
+                    subtitle="Canlı Takip" 
+                    icon={Fingerprint} 
+                    colorClass="text-emerald-400" 
+                    trend="+12%"
+                />
+                <DashboardCard 
+                    title="BEKLEYENLER" 
+                    value={assignments.length.toString()} 
+                    subtitle="Onay Süreci" 
+                    icon={FileText} 
+                    colorClass="text-amber-400"
+                    trend="-2%"
+                />
+            </div>
+            
+            {/* Quick Activity Feed */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 glass-panel p-8 rounded-[2.5rem]">
+                    <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                            <Activity size={20} className="text-orange-400"/>
+                            Son Aktiviteler
+                        </h3>
+                        <Button variant="ghost" className="text-xs">Tümünü Gör</Button>
+                    </div>
+                    <div className="space-y-4">
+                        {[1,2,3].map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                                        <Bell size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-medium text-sm">Yeni bir duyuru yayınlandı.</p>
+                                        <p className="text-xs text-gray-500">2 saat önce • Sistem</p>
+                                    </div>
+                                </div>
+                                <ChevronRight size={16} className="text-gray-600 group-hover:text-white"/>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                
+                <div className="glass-panel p-8 rounded-[2.5rem] bg-gradient-to-b from-indigo-900/10 to-transparent flex flex-col items-center justify-center text-center">
+                     <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 shadow-glow">
+                         <Plus size={32} className="text-white"/>
+                     </div>
+                     <h3 className="text-lg font-bold text-white mb-2">Hızlı İşlem</h3>
+                     <p className="text-gray-400 text-sm mb-6">Yeni sınıf, öğrenci veya sınav oluştur.</p>
+                     <div className="grid grid-cols-2 gap-3 w-full">
+                         <Button variant="secondary" className="text-xs py-2 h-auto" onClick={() => setIsAddClassModalOpen(true)}>Sınıf Ekle</Button>
+                         <Button variant="secondary" className="text-xs py-2 h-auto" onClick={() => setIsAddStudentModalOpen(true)}>Öğrenci Ekle</Button>
+                     </div>
+                </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8 animate-fade-in-up">
+              {/* Student Personal Dashboard */}
+              <div className="p-1 rounded-[2.5rem] bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-500">
+                  <div className="bg-[#0f172a] rounded-[2.4rem] p-8 md:p-12 relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-12 opacity-10 rotate-12"><Rocket size={200} className="text-white"/></div>
+                       <div className="relative z-10">
+                           <h2 className="text-4xl font-black text-white mb-2">Hoş geldin, {user.name.split(' ')[0]} 👋</h2>
+                           <p className="text-gray-400 text-lg mb-8">{user.className} - {user.field} | Başarı yolculuğunda bugün harika bir gün!</p>
+                           
+                           <div className="flex flex-wrap gap-4">
+                               <div className="glass-panel px-6 py-4 rounded-2xl bg-white/5 border-white/10 flex items-center gap-4">
+                                   <div className="p-2 bg-green-500/20 rounded-lg text-green-400"><CheckCircle size={20}/></div>
+                                   <div>
+                                       <div className="text-2xl font-bold text-white">85%</div>
+                                       <div className="text-xs text-gray-400">Ödev Başarısı</div>
+                                   </div>
+                               </div>
+                               <div className="glass-panel px-6 py-4 rounded-2xl bg-white/5 border-white/10 flex items-center gap-4">
+                                   <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400"><Clock size={20}/></div>
+                                   <div>
+                                       <div className="text-2xl font-bold text-white">12</div>
+                                       <div className="text-xs text-gray-400">Kalan Etüt Saati</div>
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
+                  </div>
+              </div>
+
+              {/* Next Up / Tasks */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 glass-panel p-8 rounded-[2.5rem]">
+                      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Target className="text-indigo-400"/> Sırada Ne Var?</h3>
+                      {assignments.filter(a => !a.targetClasses || a.targetClasses.includes(user.className!)).slice(0, 3).map(assignment => (
+                          <div key={assignment.id} className="mb-4 p-5 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors flex items-center justify-between group">
+                              <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-lg group-hover:scale-110 transition-transform">
+                                      {assignment.subject.substring(0,2)}
+                                  </div>
+                                  <div>
+                                      <h4 className="text-white font-bold">{assignment.title}</h4>
+                                      <p className="text-sm text-gray-400">{new Date(assignment.dueDate).toLocaleDateString('tr-TR')} • {assignment.subject}</p>
+                                  </div>
+                              </div>
+                              <Button variant="secondary" className="px-4 py-2 h-auto text-xs" onClick={() => setActiveTab('assignments')}>Detay</Button>
+                          </div>
+                      ))}
+                      {assignments.length === 0 && <p className="text-gray-500 text-center py-8">Bekleyen ödevin yok. Harika!</p>}
+                  </div>
+
+                  <div className="glass-panel p-8 rounded-[2.5rem] bg-gradient-to-b from-indigo-900/20 to-transparent border-indigo-500/20">
+                      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Bot className="text-indigo-400"/> Enid AI</h3>
+                      <div className="bg-[#020617]/50 rounded-2xl p-6 border border-white/5 mb-6 text-sm text-gray-300 italic">
+                          "Merhaba {user.name}! Bugün matematik tekrarı yapmaya ne dersin? Sana yardımcı olabilirim."
+                      </div>
+                      <Button variant="luxury" className="w-full" onClick={() => setIsChatOpen(true)}>Sohbet Başlat</Button>
+                  </div>
+              </div>
+          </div>
+        );
+
+      case 'students':
+        return (
+          <div className="space-y-6 animate-fade-in-up">
+              <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight">Öğrenciler</h2>
+                    <p className="text-gray-400">Toplam {students.length} kayıtlı öğrenci</p>
+                  </div>
+                  <div className="flex gap-3">
+                     <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                        <input 
+                            type="text" placeholder="Ara..." 
+                            className="pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-indigo-500 w-64"
+                            value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                        />
+                     </div>
+                     <select 
+                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none"
+                        value={filterClass} onChange={e => setFilterClass(e.target.value)}
+                     >
+                        <option value="" className="text-black">Tüm Sınıflar</option>
+                        {classesList.map(c => <option key={c} value={c} className="text-black">{c}</option>)}
+                     </select>
+                     {user.role === UserRole.INSTRUCTOR && (
+                        <Button onClick={() => setIsAddStudentModalOpen(true)} variant="luxury"><Plus size={18} className="mr-2"/> Ekle</Button>
+                     )}
+                  </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {students
+                    .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .filter(s => !filterClass || s.className === filterClass)
+                    .map(student => (
+                      <div key={student.id} className="glass-panel p-6 rounded-3xl group relative hover:border-indigo-500/30 transition-all">
+                          <div className="flex items-start justify-between mb-4">
+                              <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-2xl font-bold text-white overflow-hidden">
+                                  {student.photoUrl ? <img src={student.photoUrl} className="w-full h-full object-cover" /> : student.name.charAt(0)}
+                              </div>
+                              <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-indigo-300">{student.className}</span>
+                          </div>
+                          <h3 className="text-xl font-bold text-white mb-1">{student.name}</h3>
+                          <p className="text-sm text-gray-400 mb-4">{student.field} • {student.email}</p>
+                          <div className="flex gap-2">
+                              <Button variant="secondary" className="flex-1 h-10 py-0 text-xs">Profili Gör</Button>
+                              <Button variant="secondary" className="h-10 w-10 p-0 flex items-center justify-center text-red-400 border-red-500/20 hover:bg-red-500/10" onClick={async () => { if(confirm('Silmek istediğine emin misin?')) await db.collection('users').doc(student.id).delete(); }}><Trash2 size={16}/></Button>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+              {students.length === 0 && <EmptyState icon={Users} title="Henüz öğrenci yok" description="Sisteme öğrenci ekleyerek başlayın." />}
+          </div>
+        );
+
+      case 'assignments':
+        return (
+             <div className="space-y-6 animate-fade-in-up">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-3xl font-black text-white tracking-tight">Ödevler</h2>
+                        <p className="text-gray-400">Aktif ve geçmiş ödevler</p>
+                    </div>
+                    {user.role === UserRole.INSTRUCTOR && (
+                        <Button onClick={() => setIsAddAssignmentModalOpen(true)} variant="luxury"><Plus size={18} className="mr-2"/> Ödev Oluştur</Button>
+                    )}
+                </div>
+                
+                <div className="grid gap-4">
+                    {assignments.map(assignment => (
+                        <div key={assignment.id} className="glass-panel p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group hover:bg-white/5 transition-colors">
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold shrink-0">
+                                    <BookOpen size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">{assignment.title}</h3>
+                                    <p className="text-sm text-gray-400 mt-1 line-clamp-2 max-w-xl">{assignment.description}</p>
+                                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 font-medium">
+                                        <span className="flex items-center gap-1"><Clock size={12}/> {new Date(assignment.dueDate).toLocaleDateString('tr-TR')}</span>
+                                        <span className="flex items-center gap-1"><School size={12}/> {assignment.targetClasses?.join(', ') || 'Tümü'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {user.role === UserRole.STUDENT && (
+                                    <Button variant="secondary" className="text-xs">Detay & Yükle</Button>
+                                )}
+                                {user.role === UserRole.INSTRUCTOR && (
+                                    <Button variant="ghost" className="text-red-400 hover:text-red-300" onClick={async () => { if(confirm('Sil?')) await db.collection('assignments').doc(assignment.id).delete(); }}><Trash2 size={18}/></Button>
+                                )}
                             </div>
                         </div>
                     ))}
-                    {isChatLoading && <div className="flex justify-start"><div className="bg-slate-800 p-3 rounded-xl rounded-tl-none border border-slate-700"><div className="flex gap-1"><span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></span><span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-75"></span><span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-150"></span></div></div></div>}
+                    {assignments.length === 0 && <EmptyState icon={FileText} title="Ödev bulunamadı" description="Şu an için listelenecek bir ödev yok." />}
                 </div>
-                <form onSubmit={handleChatSubmit} className="p-3 bg-slate-800 border-t border-slate-700 flex gap-2">
-                    <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Bir şeyler sor..." className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-brand-500 outline-none"/>
-                    <button type="submit" className="p-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg"><Send size={16}/></button>
-                </form>
-            </div>
+             </div>
+        );
 
-            {/* Floating Button */}
-            <button onClick={() => setIsChatOpen(!isChatOpen)} className="pointer-events-auto w-14 h-14 bg-gradient-to-r from-brand-500 to-indigo-600 rounded-full shadow-lg shadow-brand-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform group">
-                <Sparkles size={24} className={`transition-transform duration-500 ${isChatOpen ? 'rotate-180' : 'rotate-0'}`}/>
+      case 'exams':
+        return (
+            <div className="space-y-6 animate-fade-in-up">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-3xl font-black text-white tracking-tight">Sınavlar</h2>
+                        <p className="text-gray-400">Online sınav yönetimi</p>
+                    </div>
+                    {user.role === UserRole.INSTRUCTOR && (
+                        <Button onClick={() => setIsExamModalOpen(true)} variant="luxury"><Plus size={18} className="mr-2"/> Sınav Hazırla</Button>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {exams.map(exam => (
+                        <div key={exam.id} className="glass-panel p-8 rounded-3xl relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-6 opacity-10 rotate-12 group-hover:rotate-0 transition-all duration-500"><Award size={100} className="text-white"/></div>
+                            <div className="relative z-10">
+                                <Badge status="UPCOMING" className="mb-4" />
+                                <h3 className="text-2xl font-bold text-white mb-2">{exam.title}</h3>
+                                <p className="text-gray-400 text-sm mb-6 line-clamp-2">{exam.description}</p>
+                                <div className="flex items-center gap-4 mb-6 text-sm text-gray-500">
+                                    <span className="flex items-center gap-1"><Clock size={14}/> {exam.durationMinutes} Dk</span>
+                                    <span className="flex items-center gap-1"><BookOpen size={14}/> {exam.questions.length} Soru</span>
+                                </div>
+                                {user.role === UserRole.STUDENT ? (
+                                    <Button variant="primary" className="w-full" onClick={() => handleStartExam(exam)}>Sınava Başla</Button>
+                                ) : (
+                                    <Button variant="secondary" className="w-full" onClick={async () => { if(confirm('Sil?')) await db.collection('exams').doc(exam.id).delete(); }}>Sınavı Sil</Button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                {exams.length === 0 && <EmptyState icon={Award} title="Sınav Yok" description="Aktif bir sınav bulunmuyor." />}
+            </div>
+        );
+
+      case 'classes':
+        return (
+             <div className="space-y-6 animate-fade-in-up">
+                 <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-3xl font-black text-white tracking-tight">Sınıflar</h2>
+                        <p className="text-gray-400">Okuldaki şubeler ve mevcutlar</p>
+                    </div>
+                    {user.role === UserRole.INSTRUCTOR && (
+                        <Button onClick={() => setIsAddClassModalOpen(true)} variant="luxury"><Plus size={18} className="mr-2"/> Sınıf Ekle</Button>
+                    )}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {classesList.map(cls => (
+                        <div key={cls} onClick={() => { setFilterClass(cls); setActiveTab('students'); }} className="glass-panel p-6 rounded-2xl text-center cursor-pointer hover:border-indigo-500 transition-all group">
+                             <div className="text-3xl font-black text-white mb-2 group-hover:scale-110 transition-transform">{cls}</div>
+                             <div className="text-xs text-gray-400 uppercase font-bold">{students.filter(s => s.className === cls).length} Öğrenci</div>
+                        </div>
+                    ))}
+                </div>
+                {classesList.length === 0 && <EmptyState icon={School} title="Sınıf Yok" description="Henüz bir sınıf tanımlanmamış." />}
+             </div>
+        );
+
+      case 'fields':
+          return (
+             <div className="space-y-6 animate-fade-in-up">
+                 <div className="mb-6">
+                    <h2 className="text-3xl font-black text-white tracking-tight">Alanlar</h2>
+                    <p className="text-gray-400">Eğitim bölümleri</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {fieldsList.map(field => (
+                        <div key={field} onClick={() => { setFilterField(field); setActiveTab('students'); }} className="glass-panel p-8 rounded-3xl relative overflow-hidden cursor-pointer hover:-translate-y-1 transition-transform">
+                             <div className="absolute top-0 right-0 p-4 opacity-10"><Layers size={80} className="text-white"/></div>
+                             <h3 className="text-2xl font-bold text-white mb-2">{field}</h3>
+                             <p className="text-gray-400">{students.filter(s => s.field === field).length} Öğrenci kayıtlı</p>
+                        </div>
+                    ))}
+                </div>
+             </div>
+          );
+      
+      case 'attendance':
+          return user.role === UserRole.STUDENT ? (
+              <div className="max-w-xl mx-auto space-y-8 animate-fade-in-up">
+                  <div className="glass-panel p-10 rounded-[3rem] text-center relative overflow-hidden">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500/20 rounded-full blur-[60px] animate-pulse-slow"></div>
+                      <div className="relative z-10">
+                          <Fingerprint size={80} className="text-indigo-400 mx-auto mb-6" />
+                          <h2 className="text-3xl font-black text-white mb-2">Dijital Yoklama</h2>
+                          <p className="text-gray-400 mb-8">Okula giriş ve çıkışlarda QR veya parmak izi yerine bu butonu kullan.</p>
+                          
+                          <div className="flex gap-4 justify-center">
+                              <Button variant="luxury" className="px-10 py-5 text-lg" onClick={async () => {
+                                  await db.collection('attendance').add({
+                                      studentId: user.id, date: new Date().toISOString(), type: 'CHECK_IN'
+                                  });
+                                  alert('Giriş kaydedildi! Hoş geldin.');
+                              }}>Giriş Yap</Button>
+                              <Button variant="secondary" className="px-10 py-5 text-lg" onClick={async () => {
+                                  await db.collection('attendance').add({
+                                      studentId: user.id, date: new Date().toISOString(), type: 'CHECK_OUT'
+                                  });
+                                  alert('Çıkış kaydedildi! İyi akşamlar.');
+                              }}>Çıkış Yap</Button>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          ) : (
+              <div className="space-y-6 animate-fade-in-up">
+                   <div className="mb-6"><h2 className="text-3xl font-black text-white">Giriş / Çıkış Logları</h2></div>
+                   <div className="glass-panel p-0 rounded-3xl overflow-hidden">
+                       <div className="overflow-x-auto">
+                           <table className="w-full text-left text-sm text-gray-400">
+                               <thead className="bg-white/5 text-xs uppercase font-bold text-gray-200">
+                                   <tr>
+                                       <th className="px-6 py-4">Öğrenci ID</th>
+                                       <th className="px-6 py-4">İşlem</th>
+                                       <th className="px-6 py-4">Tarih / Saat</th>
+                                   </tr>
+                               </thead>
+                               <tbody>
+                                   {attendanceRecords.map(record => (
+                                       <tr key={record.id} className="border-b border-white/5 hover:bg-white/5">
+                                           <td className="px-6 py-4">{record.studentId}</td>
+                                           <td className="px-6 py-4">
+                                               <span className={`px-2 py-1 rounded text-xs font-bold ${record.type === 'CHECK_IN' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                   {record.type === 'CHECK_IN' ? 'Giriş' : 'Çıkış'}
+                                               </span>
+                                           </td>
+                                           <td className="px-6 py-4">{new Date(record.date).toLocaleString('tr-TR')}</td>
+                                       </tr>
+                                   ))}
+                               </tbody>
+                           </table>
+                           {attendanceRecords.length === 0 && <p className="text-center py-8">Kayıt yok.</p>}
+                       </div>
+                   </div>
+              </div>
+          );
+
+      case 'messages':
+        return (
+            <div className="flex h-[80vh] gap-6 animate-fade-in-up">
+                 {/* Contacts List */}
+                 <div className="w-80 glass-panel rounded-3xl p-4 flex flex-col">
+                     <h3 className="text-lg font-bold text-white mb-4 px-2">Mesajlar</h3>
+                     <div className="space-y-2 overflow-y-auto flex-1">
+                         {students.map(s => (
+                             <div key={s.id} onClick={() => setSelectedUserForChat(s)} className={`p-3 rounded-xl flex items-center gap-3 cursor-pointer transition-all ${selectedUserForChat?.id === s.id ? 'bg-indigo-600' : 'hover:bg-white/5'}`}>
+                                 <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm">{s.name.charAt(0)}</div>
+                                 <div className="flex-1 min-w-0">
+                                     <h4 className="font-bold text-white text-sm truncate">{s.name}</h4>
+                                     <p className="text-xs text-gray-400 truncate">{s.className}</p>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+                 </div>
+
+                 {/* Chat Area */}
+                 <div className="flex-1 glass-panel rounded-3xl flex flex-col overflow-hidden relative">
+                     {selectedUserForChat ? (
+                         <>
+                             <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+                                 <div className="flex items-center gap-3">
+                                     <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center font-bold">{selectedUserForChat.name.charAt(0)}</div>
+                                     <h3 className="font-bold text-white">{selectedUserForChat.name}</h3>
+                                 </div>
+                             </div>
+                             <div className="flex-1 p-6 overflow-y-auto space-y-4">
+                                 <p className="text-center text-gray-500 text-sm my-4">Sohbet başlangıcı</p>
+                                 {/* Messages would map here from 'conversations' collection */}
+                             </div>
+                             <div className="p-4 border-t border-white/10 bg-white/5 flex gap-2">
+                                 <Button variant="ghost" className="px-3"><Paperclip size={20}/></Button>
+                                 <input className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 text-white outline-none" placeholder="Mesaj yaz..." />
+                                 <Button variant="primary" className="w-12 px-0"><Send size={18}/></Button>
+                             </div>
+                         </>
+                     ) : (
+                         <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                             <MessageSquare size={48} className="mb-4 opacity-50"/>
+                             <p>Sohbet etmek için bir kişi seçin.</p>
+                         </div>
+                     )}
+                 </div>
+            </div>
+        );
+
+      case 'announcements':
+          return (
+             <div className="space-y-6 animate-fade-in-up">
+                 <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-3xl font-black text-white tracking-tight">Duyurular</h2>
+                        <p className="text-gray-400">Kurum içi bildirimler</p>
+                    </div>
+                    {user.role === UserRole.INSTRUCTOR && (
+                        <Button onClick={() => setIsAddAnnouncementModalOpen(true)} variant="luxury"><Plus size={18} className="mr-2"/> Duyuru Ekle</Button>
+                    )}
+                </div>
+                <div className="grid gap-4">
+                    {announcements.map(ann => (
+                        <div key={ann.id} className={`glass-panel p-6 rounded-2xl relative overflow-hidden ${ann.priority === 'HIGH' ? 'border-l-4 border-l-red-500' : ''}`}>
+                             <div className="flex justify-between items-start mb-2">
+                                 <h3 className="text-xl font-bold text-white">{ann.title}</h3>
+                                 <span className="text-xs text-gray-400">{new Date(ann.date).toLocaleDateString('tr-TR')}</span>
+                             </div>
+                             <p className="text-gray-300 leading-relaxed mb-4">{ann.content}</p>
+                             <div className="flex items-center gap-2 text-xs text-gray-500">
+                                 <UserIcon size={12}/> <span>{ann.authorName}</span>
+                                 {ann.priority === 'HIGH' && <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded ml-2 font-bold">ÖNEMLİ</span>}
+                             </div>
+                        </div>
+                    ))}
+                    {announcements.length === 0 && <EmptyState icon={Megaphone} title="Duyuru Yok" description="Henüz yayınlanmış bir duyuru bulunmuyor." />}
+                </div>
+             </div>
+          );
+
+      case 'study':
+          return (
+             <div className="space-y-6 animate-fade-in-up">
+                 <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-3xl font-black text-white tracking-tight">Etüt Programı</h2>
+                        <p className="text-gray-400">Birebir ve grup çalışmaları</p>
+                    </div>
+                     <Button variant="luxury" onClick={async () => {
+                         const subj = prompt("Ders?");
+                         if(subj) await db.collection('study').add({subject: subj, date: new Date().toISOString(), status: 'UPCOMING', studentId: user.id});
+                     }}><Plus size={18} className="mr-2"/> Talep Oluştur</Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {studySessions.map(study => (
+                        <div key={study.id} className="glass-panel p-6 rounded-2xl border-t-4 border-t-indigo-500">
+                             <h3 className="font-bold text-white text-lg mb-1">{study.subject}</h3>
+                             <p className="text-gray-400 text-sm mb-4">Eğitmen: {study.teacherName || 'Atanıyor...'}</p>
+                             <div className="flex items-center gap-2 text-sm text-gray-300 bg-white/5 p-2 rounded-lg">
+                                 <Calendar size={16}/> <span>{new Date(study.date).toLocaleDateString()}</span>
+                                 <Clock size={16} className="ml-2"/> <span>{study.time || '10:00'}</span>
+                             </div>
+                        </div>
+                    ))}
+                    {studySessions.length === 0 && <EmptyState icon={Clock} title="Etüt Yok" description="Planlanmış bir etüt çalışması yok." />}
+                </div>
+             </div>
+          );
+
+      case 'projects':
+          return (
+             <div className="space-y-6 animate-fade-in-up">
+                 <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-3xl font-black text-white tracking-tight">Projeler</h2>
+                        <p className="text-gray-400">Dönem ödevleri ve grup çalışmaları</p>
+                    </div>
+                     <Button variant="luxury" onClick={async () => {
+                         const title = prompt("Proje Başlığı?");
+                         if(title) await db.collection('projects').add({title, progress: 0, status: 'PLANNING', studentId: user.id});
+                     }}><Plus size={18} className="mr-2"/> Proje Ekle</Button>
+                </div>
+                <div className="space-y-4">
+                    {projects.map(proj => (
+                        <div key={proj.id} className="glass-panel p-6 rounded-2xl">
+                             <div className="flex justify-between items-center mb-4">
+                                 <h3 className="font-bold text-white text-xl">{proj.title}</h3>
+                                 <Badge status={proj.status} />
+                             </div>
+                             <div className="w-full bg-white/10 rounded-full h-2 mb-2">
+                                 <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style={{width: `${proj.progress}%`}}></div>
+                             </div>
+                             <div className="flex justify-between text-xs text-gray-400">
+                                 <span>İlerleme: %{proj.progress}</span>
+                                 <span>Teslim: {proj.deadline ? new Date(proj.deadline).toLocaleDateString() : 'Belirlenmedi'}</span>
+                             </div>
+                        </div>
+                    ))}
+                    {projects.length === 0 && <EmptyState icon={Briefcase} title="Proje Yok" description="Henüz bir proje kaydı oluşturmadın." />}
+                </div>
+             </div>
+          );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className={`min-h-screen bg-[#020617] text-white flex transition-all duration-500 font-sans selection:bg-indigo-500/30`}>
+      {/* Sidebar */}
+      <aside className={`fixed lg:relative z-40 bg-[#0f172a]/80 backdrop-blur-xl border-r border-white/5 h-screen transition-all duration-500 ease-spring ${sidebarCollapsed ? 'w-20' : 'w-72'} flex flex-col`}>
+        <div className={`p-6 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+           {!sidebarCollapsed && (
+             <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-gradient-to-tr from-amber-400 to-orange-600 flex items-center justify-center font-bold text-black">E</div>
+                <span className="font-black text-2xl tracking-tight">ENID AI</span>
+             </div>
+           )}
+           <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors">
+              {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+           </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 hide-scrollbar">
+           {navItems.map(item => (
+              <SidebarItem 
+                key={item.id} 
+                icon={item.icon} 
+                label={item.label} 
+                isActive={activeTab === item.id} 
+                collapsed={sidebarCollapsed}
+                onClick={() => setActiveTab(item.id)}
+                colorClass={user.role === UserRole.INSTRUCTOR ? 'text-amber-500' : 'text-indigo-400'}
+              />
+           ))}
+        </div>
+
+        <div className="p-4 border-t border-white/5">
+            <button onClick={handleLogout} className={`flex items-center gap-3 w-full p-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                <LogOut size={20} />
+                {!sidebarCollapsed && <span className="font-bold">Çıkış Yap</span>}
             </button>
-       </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 h-screen overflow-hidden flex flex-col relative">
+         {/* Top Header */}
+         <header className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#0f172a]/50 backdrop-blur-sm z-30">
+             <div className="flex items-center gap-4">
+                 {activeTab !== 'dashboard' && (
+                     <Button variant="ghost" onClick={() => setActiveTab('dashboard')} className="p-2 h-auto text-gray-400 hover:text-white">
+                         <ArrowLeft size={20} />
+                     </Button>
+                 )}
+                 <h1 className="text-xl font-bold text-gray-200 capitalize">{navItems.find(n => n.id === activeTab)?.label || 'Enid AI'}</h1>
+             </div>
+             <div className="flex items-center gap-6">
+                 <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10 text-sm font-mono text-gray-400">
+                     <Calendar size={14} className="text-amber-500" />
+                     {new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                 </div>
+                 <div className="relative cursor-pointer group">
+                     <Bell size={20} className="text-gray-400 group-hover:text-white transition-colors" />
+                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                 </div>
+                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 p-0.5 shadow-glow">
+                     <div className="w-full h-full rounded-full bg-[#020617] flex items-center justify-center font-bold text-sm">
+                         {user.name.charAt(0)}
+                     </div>
+                 </div>
+             </div>
+         </header>
+
+         {/* Content Area */}
+         <div className="flex-1 overflow-y-auto p-6 md:p-8 relative scroll-smooth">
+             {renderContent()}
+         </div>
+      </main>
+
+      {/* Floating Chat Button */}
+      {user.role === UserRole.STUDENT && (
+        <div className="fixed bottom-8 right-8 z-50">
+            <button 
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-glow-lg flex items-center justify-center hover:scale-110 transition-transform duration-300"
+            >
+                {isChatOpen ? <X size={28} /> : <Bot size={28} />}
+            </button>
+        </div>
+      )}
+
+      {/* Chat Window */}
+      {isChatOpen && (
+          <div className="fixed bottom-28 right-8 w-96 h-[500px] glass-panel bg-[#0f172a]/95 rounded-3xl border border-white/10 shadow-2xl flex flex-col overflow-hidden z-40 animate-in slide-in-from-bottom-10 fade-in duration-300">
+              <div className="p-4 border-b border-white/10 bg-indigo-600/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center"><Bot size={16}/></div>
+                      <div>
+                          <h4 className="font-bold text-white">Enid AI</h4>
+                          <p className="text-xs text-indigo-300">Öğrenci Asistanı</p>
+                      </div>
+                  </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {chatHistory.length === 0 && (
+                      <div className="text-center text-gray-500 text-sm mt-10">
+                          <Bot size={40} className="mx-auto mb-4 opacity-50"/>
+                          <p>Merhaba! Derslerinle ilgili bana her şeyi sorabilirsin.</p>
+                      </div>
+                  )}
+                  {chatHistory.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white/10 text-gray-200 rounded-bl-none'}`}>
+                              {msg.parts[0].text}
+                          </div>
+                      </div>
+                  ))}
+                  {chatLoading && <div className="text-xs text-gray-500 ml-4">Enid yazıyor...</div>}
+              </div>
+              <div className="p-4 border-t border-white/10 bg-white/5 flex gap-2">
+                  <input 
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-indigo-500"
+                    placeholder="Bir şeyler yaz..."
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                  />
+                  <Button variant="primary" className="h-10 w-10 p-0 flex items-center justify-center rounded-xl" onClick={handleSendMessage} disabled={chatLoading}><Send size={18}/></Button>
+              </div>
+          </div>
+      )}
+
+      {/* --- MODALS --- */}
+      
+      {/* Add Assignment Modal */}
+      {isAddAssignmentModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddAssignmentModalOpen(false)}></div>
+              <div className="relative z-10 w-full max-w-2xl bg-[#0f172a] rounded-3xl border border-white/10 p-8">
+                   <h2 className="text-2xl font-black text-white mb-6">Yeni Ödev Oluştur</h2>
+                   <div className="space-y-4">
+                        <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="Ödev Başlığı" id="newAssignTitle"/>
+                        <textarea className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white h-32" placeholder="Açıklama" id="newAssignDesc"/>
+                        <div className="grid grid-cols-2 gap-4">
+                            <input type="date" className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white" id="newAssignDate"/>
+                            <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white" id="newAssignSubject">
+                                <option>Matematik</option><option>Fizik</option><option>Kimya</option><option>Biyoloji</option><option>Türkçe</option>
+                            </select>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-6">
+                            <Button variant="ghost" onClick={() => setIsAddAssignmentModalOpen(false)}>İptal</Button>
+                            <Button variant="luxury" onClick={() => {
+                                const title = (document.getElementById('newAssignTitle') as HTMLInputElement).value;
+                                const description = (document.getElementById('newAssignDesc') as HTMLTextAreaElement).value;
+                                const dueDate = (document.getElementById('newAssignDate') as HTMLInputElement).value;
+                                const subject = (document.getElementById('newAssignSubject') as HTMLSelectElement).value;
+                                handleCreateAssignment({title, description, dueDate, subject});
+                            }}>Oluştur</Button>
+                        </div>
+                   </div>
+              </div>
+          </div>
+      )}
+      
+      {/* Add Announcement Modal */}
+      {isAddAnnouncementModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddAnnouncementModalOpen(false)}></div>
+              <div className="relative z-10 w-full max-w-lg bg-[#0f172a] rounded-3xl border border-white/10 p-8">
+                   <h2 className="text-2xl font-black text-white mb-6">Yeni Duyuru</h2>
+                   <div className="space-y-4">
+                        <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="Başlık" id="newAnnounceTitle"/>
+                        <textarea className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white h-32" placeholder="Duyuru içeriği..." id="newAnnounceContent"/>
+                        <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white" id="newAnnouncePriority">
+                            <option value="NORMAL">Normal</option>
+                            <option value="HIGH">Acil / Önemli</option>
+                        </select>
+                        <div className="flex justify-end gap-3 mt-6">
+                            <Button variant="ghost" onClick={() => setIsAddAnnouncementModalOpen(false)}>İptal</Button>
+                            <Button variant="luxury" onClick={() => {
+                                const title = (document.getElementById('newAnnounceTitle') as HTMLInputElement).value;
+                                const content = (document.getElementById('newAnnounceContent') as HTMLTextAreaElement).value;
+                                const priority = (document.getElementById('newAnnouncePriority') as HTMLSelectElement).value as any;
+                                handleCreateAnnouncement(title, content, priority, [], []);
+                            }}>Yayınla</Button>
+                        </div>
+                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* Add Student Modal */}
+      {isAddStudentModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddStudentModalOpen(false)}></div>
+              <div className="relative z-10 w-full max-w-lg bg-[#0f172a] rounded-3xl border border-white/10 p-8">
+                   <h2 className="text-2xl font-black text-white mb-6">Öğrenci Ekle</h2>
+                   <p className="text-gray-400 mb-6">Öğrencinin sisteme kayıt olması için bilgilerini girin veya davet kodu oluşturun.</p>
+                   <div className="space-y-4">
+                        <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="Ad Soyad" />
+                        <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="E-posta" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white">
+                                <option>Sınıf Seç</option>
+                                {classesList.map(c => <option key={c}>{c}</option>)}
+                            </select>
+                            <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white">
+                                <option>Alan Seç</option>
+                                {fieldsList.map(f => <option key={f}>{f}</option>)}
+                            </select>
+                        </div>
+                   </div>
+                   <div className="flex justify-end gap-3 mt-8">
+                        <Button variant="ghost" onClick={() => setIsAddStudentModalOpen(false)}>İptal</Button>
+                        <Button variant="primary">Ekle</Button>
+                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* Add Class Modal */}
+      {isAddClassModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddClassModalOpen(false)}></div>
+              <div className="relative z-10 w-full max-w-md bg-[#0f172a] rounded-3xl border border-white/10 p-8">
+                   <h2 className="text-2xl font-black text-white mb-6">Sınıf Oluştur</h2>
+                   <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white mb-6" placeholder="Örn: 12-A" />
+                   <div className="flex justify-end gap-3">
+                        <Button variant="ghost" onClick={() => setIsAddClassModalOpen(false)}>İptal</Button>
+                        <Button variant="primary" onClick={() => { setClassesList([...classesList, "Yeni Sınıf"]); setIsAddClassModalOpen(false); }}>Kaydet</Button>
+                   </div>
+              </div>
+          </div>
+      )}
 
     </div>
   );
-};
-
-export default App;
+}
