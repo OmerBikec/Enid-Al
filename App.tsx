@@ -13,7 +13,7 @@ import {
   Star, Trophy, Target, Rocket, Instagram, Twitter, Facebook, Linkedin, Map,
   CheckSquare, ArrowDown, BrainCircuit, BarChart3, Settings, UserPlus, FileCheck,
   Laptop, Paperclip, Mic, Video, VideoOff, MicOff, PhoneOff, Headphones, ShieldCheck,
-  Smartphone, Monitor, Lightbulb, Key, Unlock, LogIn
+  Smartphone, Monitor, Lightbulb, Key, Unlock, LogIn, Hash
 } from 'lucide-react';
 import { 
   User, UserRole, Assignment, Submission, SubmissionStatus, 
@@ -674,8 +674,8 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [darkMode, setDarkMode] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   // --- DATA STATES ---
   const [students, setStudents] = useState<User[]>([]);
@@ -686,6 +686,7 @@ const App: React.FC = () => {
   const [fields, setFields] = useState<string[]>([]);
   const [studySessions, setStudySessions] = useState<StudySession[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   
   // UI States
   const [isModalOpen, setIsModalOpen] = useState<{type: string, isOpen: boolean}>({type: '', isOpen: false});
@@ -704,17 +705,7 @@ const App: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
 
-  // Messaging State
-  const [conversations, setConversations] = useState<Conversation[]>([
-      {
-          id: '1', participantId: '2', participantName: 'Ahmet Yılmaz', participantAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmet', participantRole: UserRole.INSTRUCTOR,
-          lastMessage: 'Ödevi kontrol ettim.', unreadCount: 1, status: 'active',
-          messages: [
-              { id: 'm1', senderId: '2', text: 'Merhaba, nasılsın?', messageType: 'text', timestamp: new Date().toISOString() },
-              { id: 'm2', senderId: '1', text: 'İyiyim hocam, siz?', messageType: 'text', timestamp: new Date().toISOString() }
-          ]
-      }
-  ]);
+  // Messaging State (Human)
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -755,6 +746,17 @@ const App: React.FC = () => {
       const unsubFields = db.collection("fields").onSnapshot((snapshot) => setFields(snapshot.docs.map(d => d.data().name)));
       const unsubStudy = db.collection("studySessions").onSnapshot((snapshot) => setStudySessions(snapshot.docs.map(d => ({id: d.id, ...d.data()} as StudySession))));
       const unsubProjects = db.collection("projects").onSnapshot((snapshot) => setProjects(snapshot.docs.map(d => ({id: d.id, ...d.data()} as Project))));
+      
+      // Mock Data for conversations if empty
+      if (conversations.length === 0) {
+          setConversations([
+             {
+                 id: '1', participantId: 'mock1', participantName: 'Dr. Zeynep Hoca', participantAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zeynep', participantRole: UserRole.INSTRUCTOR,
+                 lastMessage: 'Ödevini kontrol ettim.', unreadCount: 1, status: 'active',
+                 messages: [{ id: 'm1', senderId: 'mock1', text: 'Merhaba, ödevini kontrol ettim. Gayet başarılı.', messageType: 'text', timestamp: new Date().toISOString() }]
+             }
+          ]);
+      }
 
       return () => { unsubStudents(); unsubAssignments(); unsubExams(); unsubAnnouncements(); unsubClasses(); unsubFields(); unsubStudy(); unsubProjects(); };
   }, [user]);
@@ -813,13 +815,29 @@ const App: React.FC = () => {
   const handleAddStudy = async () => {
       await db.collection("studySessions").add({ subject: formData.subject, teacherName: formData.teacherName, date: formData.date, time: formData.time, location: 'Etüt Odası 3', status: 'UPCOMING' });
       setIsModalOpen({type: '', isOpen: false});
+      setFormData({});
   };
+  
+  const handleAddProject = async () => {
+      await db.collection("projects").add({ 
+          title: formData.title, 
+          description: formData.description, 
+          deadline: formData.deadline, 
+          progress: 0, 
+          status: 'PLANNING',
+          teamMembers: [user!.id] 
+      });
+      setIsModalOpen({type: '', isOpen: false});
+      setFormData({});
+  };
+
   const handleAddAnnouncement = async () => {
       await db.collection("announcements").add({ title: formData.title, content: formData.content, date: new Date().toISOString(), authorName: user!.name, priority: 'NORMAL' });
       setIsModalOpen({type:'', isOpen:false});
+      setFormData({});
   };
-  const handleAddClass = async () => { await db.collection("classes").add({ name: formData.name }); setIsModalOpen({type:'', isOpen:false}); };
-  const handleAddField = async () => { await db.collection("fields").add({ name: formData.name }); setIsModalOpen({type:'', isOpen:false}); };
+  const handleAddClass = async () => { await db.collection("classes").add({ name: formData.name }); setIsModalOpen({type:'', isOpen:false}); setFormData({}); };
+  const handleAddField = async () => { await db.collection("fields").add({ name: formData.name }); setIsModalOpen({type:'', isOpen:false}); setFormData({}); };
 
   const handleDeleteStudent = async (studentId: string) => {
       if (window.confirm("Bu öğrenciyi silmek istediğinize emin misiniz?")) {
@@ -861,7 +879,7 @@ const App: React.FC = () => {
   const handleSendMessage = (type: MessageType = 'text', content?: string) => {
       if (!activeConversationId) return;
       const newMsg: Message = { id: Date.now().toString(), senderId: user!.id, messageType: type, text: type === 'text' ? messageInput : undefined, fileUrl: type !== 'text' ? content : undefined, fileName: type === 'file' ? 'odev.pdf' : undefined, duration: type === 'audio' ? '0:12' : undefined, timestamp: new Date().toISOString() };
-      setConversations(prev => prev.map(c => { if (c.id === activeConversationId) return { ...c, messages: [...c.messages, newMsg], lastMessage: 'Yeni Mesaj' }; return c; }));
+      setConversations(prev => prev.map(c => { if (c.id === activeConversationId) return { ...c, messages: [...c.messages, newMsg], lastMessage: type === 'text' ? messageInput : 'Yeni Medya' }; return c; }));
       setMessageInput('');
   };
   const handleFileUpload = () => setTimeout(() => handleSendMessage('file', '#'), 500);
@@ -980,10 +998,7 @@ const App: React.FC = () => {
                       </div>
                   </div>
               );
-            
-          // ... Other cases follow the same premium styling pattern ...
-          // Keeping existing logic for exams, students, chat etc. but wrapping in premium containers
-          
+
           case 'exams':
               return (
                   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1023,8 +1038,23 @@ const App: React.FC = () => {
                              {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'STUDENT', isOpen: true})} variant="luxury"><UserPlus size={18} className="mr-2"/> Öğrenci Ekle</Button>}
                           </div>
                       </div>
+                      <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
+                            {selectedClassFilter && (
+                                <button onClick={() => setSelectedClassFilter(null)} className="flex items-center gap-2 px-4 py-2 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30 text-sm font-bold">
+                                    Sınıf: {selectedClassFilter} <X size={14}/>
+                                </button>
+                            )}
+                            {selectedFieldFilter && (
+                                <button onClick={() => setSelectedFieldFilter(null)} className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-sm font-bold">
+                                    Alan: {selectedFieldFilter} <X size={14}/>
+                                </button>
+                            )}
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {students.map(std => (
+                          {students.filter(std => 
+                              (!selectedClassFilter || std.className === selectedClassFilter) &&
+                              (!selectedFieldFilter || std.field === selectedFieldFilter)
+                          ).map(std => (
                               <div key={std.id} className="glass-panel p-6 rounded-[2rem] flex items-center gap-5 hover:bg-white/5 transition-all group hover:border-brand-500/50">
                                   <img src={std.avatarUrl} className="w-20 h-20 rounded-2xl bg-black border border-white/10 group-hover:scale-105 transition-transform" alt=""/>
                                   <div className="flex-1">
@@ -1041,8 +1071,231 @@ const App: React.FC = () => {
                       </div>
                   </div>
               );
-            
-          // ... Other modules (Chat, Attendance, etc) keep existing logic but updated classNames for glass-panel ...
+              
+          case 'study':
+              return (
+                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex justify-between items-end mb-6">
+                          <div>
+                              <button onClick={() => setActiveTab('dashboard')} className="flex items-center text-sm text-gray-400 hover:text-white mb-2 transition-colors"><ChevronLeft size={16}/> Geri Dön</button>
+                              <h2 className="text-4xl font-black text-white">Etüt Programı</h2>
+                          </div>
+                          {user.role === UserRole.INSTRUCTOR && <Button onClick={() => setIsModalOpen({type: 'STUDY', isOpen: true})} variant="luxury"><Plus size={18} className="mr-2"/> Etüt Planla</Button>}
+                      </div>
+                      <div className="space-y-4">
+                          {studySessions.map(session => (
+                              <div key={session.id} className="glass-panel p-6 rounded-[2rem] flex items-center justify-between hover:bg-white/5 transition-colors border-l-4 border-l-purple-500">
+                                  <div className="flex items-center gap-6">
+                                      <div className="p-4 rounded-2xl bg-white/5 text-purple-400">
+                                          <div className="text-xl font-black">{session.time}</div>
+                                          <div className="text-xs uppercase font-bold text-gray-500">{new Date(session.date).toLocaleDateString('tr-TR', {weekday: 'short'})}</div>
+                                      </div>
+                                      <div>
+                                          <h4 className="text-xl font-bold text-white mb-1">{session.subject}</h4>
+                                          <p className="text-sm text-gray-400 flex items-center gap-2"><UserIcon size={14}/> {session.teacherName} • <MapPin size={14}/> {session.location}</p>
+                                      </div>
+                                  </div>
+                                  <span className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-xs font-bold border border-purple-500/20">PLANLANDI</span>
+                              </div>
+                          ))}
+                          {studySessions.length === 0 && <EmptyState icon={Calendar} title="Etüt Yok" description="Planlanmış bir etüt bulunmuyor." />}
+                      </div>
+                  </div>
+              );
+              
+          case 'projects':
+              return (
+                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex justify-between items-end mb-6">
+                          <div>
+                              <button onClick={() => setActiveTab('dashboard')} className="flex items-center text-sm text-gray-400 hover:text-white mb-2 transition-colors"><ChevronLeft size={16}/> Geri Dön</button>
+                              <h2 className="text-4xl font-black text-white">Projeler</h2>
+                          </div>
+                          <Button onClick={() => setIsModalOpen({type: 'PROJECT', isOpen: true})} variant="luxury"><Plus size={18} className="mr-2"/> Yeni Proje</Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {projects.map(project => (
+                              <div key={project.id} className="glass-panel p-8 rounded-[2.5rem] hover:bg-white/5 transition-all group border border-white/10 hover:border-blue-500/30">
+                                  <div className="flex justify-between items-start mb-6">
+                                      <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400"><Layers size={24}/></div>
+                                      <span className="text-xs font-bold text-gray-500 bg-white/5 px-2 py-1 rounded-lg">{project.status}</span>
+                                  </div>
+                                  <h3 className="text-xl font-bold text-white mb-2">{project.title}</h3>
+                                  <p className="text-sm text-gray-400 mb-6 line-clamp-2">{project.description}</p>
+                                  <div className="mb-4">
+                                      <div className="flex justify-between text-xs font-bold mb-2 text-gray-400">
+                                          <span>İlerleme</span>
+                                          <span>{project.progress}%</span>
+                                      </div>
+                                      <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                          <div className="h-full bg-blue-500 transition-all duration-1000" style={{width: `${project.progress}%`}}></div>
+                                      </div>
+                                  </div>
+                                  <div className="flex justify-between items-center text-xs text-gray-500 font-bold uppercase tracking-wider">
+                                      <span>Son: {new Date(project.deadline).toLocaleDateString()}</span>
+                                  </div>
+                              </div>
+                          ))}
+                           {projects.length === 0 && <div className="col-span-full"><EmptyState icon={Layers} title="Proje Yok" description="Henüz bir proje oluşturulmadı." /></div>}
+                      </div>
+                  </div>
+              );
+
+          case 'attendance':
+               return (
+                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex justify-between items-end mb-6">
+                          <div>
+                              <button onClick={() => setActiveTab('dashboard')} className="flex items-center text-sm text-gray-400 hover:text-white mb-2 transition-colors"><ChevronLeft size={16}/> Geri Dön</button>
+                              <h2 className="text-4xl font-black text-white">Yoklama Takibi</h2>
+                          </div>
+                      </div>
+                      
+                      {user.role === UserRole.STUDENT ? (
+                          <div className="glass-panel p-12 rounded-[3rem] text-center border border-white/10 relative overflow-hidden">
+                               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-500 to-transparent opacity-50"></div>
+                               <div className="w-32 h-32 mx-auto mb-8 relative">
+                                    <div className={`absolute inset-0 rounded-full blur-2xl transition-all duration-1000 ${todayAttendanceState === 'CHECKED_IN' ? 'bg-green-500/30' : todayAttendanceState === 'CHECKED_OUT' ? 'bg-red-500/30' : 'bg-brand-500/10'}`}></div>
+                                    <div className={`relative w-full h-full rounded-full flex items-center justify-center border-4 transition-all duration-500 bg-[#020617] ${todayAttendanceState === 'CHECKED_IN' ? 'border-green-500 text-green-500' : todayAttendanceState === 'CHECKED_OUT' ? 'border-red-500 text-red-500' : 'border-brand-500 text-brand-500'}`}>
+                                        {attendanceLoading ? <RefreshCw size={48} className="animate-spin"/> : <Fingerprint size={48} />}
+                                    </div>
+                               </div>
+                               <h3 className="text-3xl font-black text-white mb-2">Dijital Kimlik Kartı</h3>
+                               <p className="text-gray-400 mb-10 max-w-md mx-auto">Okula giriş ve çıkışlarda lütfen aşağıdaki butonları kullanarak durumunuzu bildirin.</p>
+                               
+                               <div className="flex justify-center gap-6">
+                                   <Button onClick={handleCheckIn} disabled={todayAttendanceState !== 'NONE' || attendanceLoading} className={`h-16 px-10 text-lg rounded-2xl ${todayAttendanceState === 'CHECKED_IN' ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30' : 'bg-white/5 border border-white/10 text-white'}`}>
+                                       {todayAttendanceState === 'CHECKED_IN' ? <span className="flex items-center gap-2"><Check size={20}/> Giriş Yapıldı</span> : 'Giriş Yap'}
+                                   </Button>
+                                   <Button onClick={handleCheckOut} disabled={todayAttendanceState !== 'CHECKED_IN' || attendanceLoading} className={`h-16 px-10 text-lg rounded-2xl ${todayAttendanceState === 'CHECKED_OUT' ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/30' : 'bg-white/5 border border-white/10 text-white'}`}>
+                                       {todayAttendanceState === 'CHECKED_OUT' ? <span className="flex items-center gap-2"><LogOut size={20}/> Çıkış Yapıldı</span> : 'Çıkış Yap'}
+                                   </Button>
+                               </div>
+                          </div>
+                      ) : (
+                          <div className="glass-panel p-0 rounded-[2.5rem] overflow-hidden border border-white/10">
+                              <table className="w-full text-left">
+                                  <thead className="bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest border-b border-white/10">
+                                      <tr>
+                                          <th className="p-6">Öğrenci</th>
+                                          <th className="p-6">Sınıf</th>
+                                          <th className="p-6">Giriş Saati</th>
+                                          <th className="p-6">Durum</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-white/5 text-sm">
+                                      {students.slice(0, 5).map(std => (
+                                          <tr key={std.id} className="hover:bg-white/5 transition-colors">
+                                              <td className="p-6 font-bold text-white flex items-center gap-3">
+                                                  <img src={std.avatarUrl} className="w-8 h-8 rounded-full bg-black"/> {std.name}
+                                              </td>
+                                              <td className="p-6 text-gray-400">{std.className}</td>
+                                              <td className="p-6 text-white font-mono">08:30</td>
+                                              <td className="p-6"><span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs font-bold">OKULDA</span></td>
+                                          </tr>
+                                      ))}
+                                      {students.length === 0 && <tr><td colSpan={4} className="p-12 text-center text-gray-500">Kayıt yok.</td></tr>}
+                                  </tbody>
+                              </table>
+                          </div>
+                      )}
+                  </div>
+               );
+               
+          case 'messages':
+               return (
+                  <div className="flex h-[calc(100vh-8rem)] gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      {/* Contacts List */}
+                      <div className="w-80 glass-panel rounded-[2.5rem] flex flex-col overflow-hidden border border-white/10">
+                          <div className="p-6 border-b border-white/10 bg-white/5">
+                              <h3 className="font-black text-xl text-white mb-4">Mesajlar</h3>
+                              <div className="relative">
+                                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"/>
+                                  <input placeholder="Ara..." className="w-full bg-[#020617] rounded-xl py-3 pl-10 pr-4 text-sm text-white border border-white/10 outline-none focus:border-brand-500/50 transition-colors"/>
+                              </div>
+                          </div>
+                          <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+                              {conversations.map(conv => (
+                                  <div key={conv.id} onClick={() => setActiveConversationId(conv.id)} className={`p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition-all mb-1 ${activeConversationId === conv.id ? 'bg-brand-600 shadow-lg shadow-brand-500/20' : 'hover:bg-white/5'}`}>
+                                      <div className="relative">
+                                          <img src={conv.participantAvatar} className="w-12 h-12 rounded-full bg-black object-cover border border-white/10" alt=""/>
+                                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#020617] rounded-full"></span>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                          <h4 className={`font-bold text-sm truncate ${activeConversationId === conv.id ? 'text-white' : 'text-gray-200'}`}>{conv.participantName}</h4>
+                                          <p className={`text-xs truncate ${activeConversationId === conv.id ? 'text-brand-100' : 'text-gray-500'}`}>{conv.lastMessage}</p>
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                      
+                      {/* Chat Window */}
+                      <div className="flex-1 glass-panel rounded-[2.5rem] flex flex-col overflow-hidden border border-white/10">
+                          {activeConversationId ? (
+                             <>
+                                <div className="p-6 border-b border-white/10 bg-white/5 flex justify-between items-center backdrop-blur-md">
+                                    <div className="flex items-center gap-4">
+                                        <img src={conversations.find(c => c.id === activeConversationId)?.participantAvatar} className="w-10 h-10 rounded-full bg-black border border-white/10" alt=""/>
+                                        <div>
+                                            <h3 className="font-bold text-white">{conversations.find(c => c.id === activeConversationId)?.participantName}</h3>
+                                            <span className="text-xs text-green-400 font-bold uppercase tracking-wider flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Online</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleStartCall('voice', conversations.find(c => c.id === activeConversationId)!.participantName, conversations.find(c => c.id === activeConversationId)!.participantAvatar)} className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors"><Phone size={20}/></button>
+                                        <button onClick={() => handleStartCall('video', conversations.find(c => c.id === activeConversationId)!.participantName, conversations.find(c => c.id === activeConversationId)!.participantAvatar)} className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors"><Video size={20}/></button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 bg-[#020617]/50 p-8 overflow-y-auto custom-scrollbar space-y-6">
+                                    {conversations.find(c => c.id === activeConversationId)?.messages.map(msg => (
+                                        <div key={msg.id} className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[70%] p-4 rounded-3xl ${msg.senderId === user?.id ? 'bg-brand-600 text-white rounded-tr-sm' : 'bg-white/10 text-gray-200 rounded-tl-sm'}`}>
+                                                {msg.messageType === 'text' && <p>{msg.text}</p>}
+                                                {msg.messageType === 'image' && <img src={msg.fileUrl} className="rounded-xl w-full" alt="Shared"/>}
+                                                {msg.messageType === 'file' && (
+                                                    <div className="flex items-center gap-3 bg-black/20 p-3 rounded-xl">
+                                                        <FileText size={24}/>
+                                                        <span className="text-sm underline cursor-pointer">{msg.fileName}</span>
+                                                    </div>
+                                                )}
+                                                {msg.messageType === 'audio' && (
+                                                    <div className="flex items-center gap-3 bg-black/20 p-2 rounded-xl min-w-[150px]">
+                                                        <PlayCircle size={24}/>
+                                                        <div className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden"><div className="h-full w-1/3 bg-white"></div></div>
+                                                        <span className="text-xs font-mono">{msg.duration}</span>
+                                                    </div>
+                                                )}
+                                                <span className="text-[10px] opacity-50 mt-1 block text-right">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="p-4 bg-white/5 border-t border-white/10 backdrop-blur-md">
+                                    <div className="flex items-center gap-2 bg-[#020617] p-2 rounded-2xl border border-white/10">
+                                        <button onClick={handleFileUpload} className="p-3 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-colors"><Paperclip size={20}/></button>
+                                        <input 
+                                            value={messageInput}
+                                            onChange={e => setMessageInput(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleSendMessage('text')}
+                                            placeholder="Mesaj yazın..." 
+                                            className="flex-1 bg-transparent text-white outline-none text-sm px-2"
+                                        />
+                                        <button onClick={handleVoiceRecord} className={`p-3 rounded-xl transition-all ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`}><Mic size={20}/></button>
+                                        <button onClick={() => handleSendMessage('text')} className="p-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-glow transition-colors"><Send size={20}/></button>
+                                    </div>
+                                </div>
+                             </>
+                          ) : (
+                              <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
+                                  <MessageSquare size={48} className="mb-4 opacity-50"/>
+                                  <p>Sohbet başlatmak için bir kişi seçin.</p>
+                              </div>
+                          )}
+                      </div>
+                  </div>
+               );
+
           case 'chat':
               return (
                   <div className="h-[calc(100vh-8rem)] flex flex-col glass-panel rounded-[2.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 border border-white/10 shadow-2xl">
@@ -1109,7 +1362,6 @@ const App: React.FC = () => {
                   </div>
               );
               
-          // Keeping Fields, Projects, Study, Messages logic but updating container styles
           case 'fields':
               return (
                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1284,7 +1536,15 @@ const App: React.FC = () => {
                 <div className="glass-panel p-8 rounded-[2.5rem] border border-white/10 w-full max-w-lg animate-in zoom-in-95 bg-[#020617] relative overflow-hidden shadow-2xl">
                      <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/20 rounded-full blur-[50px] pointer-events-none"></div>
                      <div className="flex justify-between items-center mb-8 relative z-10">
-                         <h3 className="text-2xl font-black text-white tracking-tight">Yeni Kayıt</h3>
+                         <h3 className="text-2xl font-black text-white tracking-tight">
+                             {isModalOpen.type === 'ASSIGNMENT' && 'Yeni Ödev'}
+                             {isModalOpen.type === 'EXAM' && 'Yeni Sınav'}
+                             {isModalOpen.type === 'CLASS' && 'Yeni Sınıf'}
+                             {isModalOpen.type === 'FIELD' && 'Yeni Alan'}
+                             {isModalOpen.type === 'STUDY' && 'Etüt Planla'}
+                             {isModalOpen.type === 'PROJECT' && 'Yeni Proje'}
+                             {isModalOpen.type === 'STUDENT' && 'Öğrenci Ekleme'}
+                         </h3>
                          <button onClick={() => setIsModalOpen({type:'', isOpen: false})} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={24} className="text-gray-400 hover:text-white"/></button>
                      </div>
                      <div className="space-y-5 relative z-10">
@@ -1332,7 +1592,15 @@ const App: React.FC = () => {
                                <input placeholder="Öğretmen" className="w-full p-4 bg-white/5 rounded-2xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, teacherName: e.target.value})} />
                                <input type="date" className="w-full p-4 bg-white/5 rounded-2xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, date: e.target.value})} />
                                <input type="time" className="w-full p-4 bg-white/5 rounded-2xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, time: e.target.value})} />
-                               <Button onClick={handleAddStudy} className="w-full py-4 rounded-2xl">Oluştur</Button>
+                               <Button onClick={handleAddStudy} variant="luxury" className="w-full py-4 rounded-2xl">Oluştur</Button>
+                            </>
+                         )}
+                         {isModalOpen.type === 'PROJECT' && (
+                            <>
+                               <input placeholder="Proje Başlığı" className="w-full p-4 bg-white/5 rounded-2xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, title: e.target.value})} />
+                               <textarea placeholder="Proje Detayları" className="w-full p-4 bg-white/5 rounded-2xl border border-white/10 text-white outline-none focus:border-brand-500/50 min-h-[100px]" onChange={e => setFormData({...formData, description: e.target.value})} />
+                               <input type="date" className="w-full p-4 bg-white/5 rounded-2xl border border-white/10 text-white outline-none focus:border-brand-500/50" onChange={e => setFormData({...formData, deadline: e.target.value})} />
+                               <Button onClick={handleAddProject} variant="luxury" className="w-full py-4 rounded-2xl">Proje Başlat</Button>
                             </>
                          )}
                          {isModalOpen.type === 'STUDENT' && (
